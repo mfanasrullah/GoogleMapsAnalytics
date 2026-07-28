@@ -38,7 +38,7 @@ hide_streamlit_style = """
             """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
-@st.cache_data
+@st.cache_data(ttl="1d") # <-- Cache untuk logo juga bisa diberi TTL jika URL-nya dinamis
 def load_logo():
     logo_path = 'image_0.png' 
     try:
@@ -80,7 +80,9 @@ def parse_gmaps_time(time_str):
 # ==========================================
 # 2. FUNGSI UNTUK MEMUAT DATA & MODEL
 # ==========================================
-@st.cache_data
+# PERUBAHAN CACHE: Menambahkan ttl="1d" agar cache kadaluarsa setiap 24 jam.
+# Ini memaksa Streamlit membaca file CSV baru setelah GitHub Actions selesai update.
+@st.cache_data(ttl="1d") 
 def load_data():
     file_path = os.path.join(DATA_PROCESSED, "final_dataset.csv")
     if not os.path.exists(file_path):
@@ -133,6 +135,12 @@ with st.sidebar:
         st.write("**[POLIBATAM]**")
     
     st.markdown("## Pusat Data Pelabuhan")
+    
+    # --- TOMBOL REFRESH MANUAL (OPSIONAL) ---
+    if st.button("🔄 Segarkan Data Sekarang"):
+        st.cache_data.clear()
+        st.rerun()
+
     st.markdown("---")
     
     st.markdown("#### 🏢 Pilih Pelabuhan")
@@ -261,7 +269,7 @@ with tab1:
         
     st.markdown("---")
     
-# Aspek Layanan 
+    # Aspek Layanan 
     st.markdown("#### Analisis Aspek Keluhan & Pujian")
     if 'aspects' in df_working.columns and 'sentiment' in df_working.columns:
         summarizer = AspectSummarizer()
