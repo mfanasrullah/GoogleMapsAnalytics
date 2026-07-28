@@ -13,3 +13,6 @@ Sastrawi
 matplotlib
 seaborn
 plotly
+wordcloud
+Pillow
+emoji
