@@ -23,18 +23,43 @@ class TextPreprocessor:
         
         # ======================================================================
         # 3. KATA KUNCI DOMAIN (CUSTOM STOPWORDS) - SANGAT PENTING UNTUK WORDCLOUD
-        # Tambahkan kata-kata yang sering muncul tapi tidak punya makna sentimen di sini
         # ======================================================================
         self.custom_stopwords = {
+            # --- 1. Kata Bawaan Sebelumnya ---
             'pelabuhan', 'ferry', 'terminal', 'batam', 'centre', 'center', 'sekupang', 
             'punggur', 'telaga', 'nongsapura', 'harbour', 'bay', 'singapore', 'singapura',
             'bintan', 'tanjung', 'pinang', 'kapal', 'tiket', 'nya', 'yg', 'di', 'ke', 'dari', 
             'ini', 'itu', 'untuk', 'dan', 'dengan', 'ada', 'tidak', 'bisa', 'sudah', 'sangat',
-            'tempat', 'kalau', 'buat', 'juga', 'aja', 'sih', 'ya', 'yang'
-# --- TAMBAHKAN KATA INGGRIS & KATA LAINNYA DI SINI ---
-            'time', 'dont', 'told', 'staff', 'good', 'nice', 'very', 'just', 'only',
-            'penumpang', 'orang', 'menit', 'jam', 'hari', 'nya', 'yg', 'di', 'ke', 'dari'
+            'tempat', 'kalau', 'buat', 'juga', 'aja', 'sih', 'ya', 'yang', 'time', 'dont', 
+            'told', 'staff', 'good', 'nice', 'very', 'just', 'only', 'penumpang', 'orang', 
+            'menit', 'jam', 'hari',
+
+            # --- 2. Hasil Stemming Sastrawi (Sering muncul di WordCloud) ---
+            'labuh', 'tumpang', 'feri', 
+
+            # --- 3. Pronoun (Kata Ganti Orang) & Tunjuk ---
+            'anda', 'saya', 'aku', 'dia', 'mereka', 'kami', 'kita', 'kalian', 
+            'sini', 'sana', 'situ', 'mana', 'apa', 'siapa', 'kapan',
+
+            # --- 4. Kata Kerja Umum & Aktivitas Dasar ---
+            'masuk', 'keluar', 'datang', 'pergi', 'jalan', 'naik', 'turun', 'beli', 
+            'bayar', 'minta', 'ambil', 'bawa', 'beri', 'tugas', 'kerja', 'tunggu', 
+            'lalu', 'selalu', 'pernah', 'bikin', 'kasih', 'suruh', 'tanya', 'lihat',
+
+            # --- 5. Adverb (Kata Keterangan) & Penyangkal ---
+            'sekali', 'paling', 'banyak', 'banget', 'lebih', 'harus', 'cuma', 'hanya', 
+            'biar', 'kalo', 'karena', 'karna', 'bukan', 'belum', 'jangan', 'cukup', 'benar',
+
+            # --- 6. Kata Benda Umum Transportasi & Lokasi ---
+            'loket', 'konter', 'counter', 'gate', 'gerbang', 'paspor', 'passport', 
+            'visa', 'roro', 'uban', 'tanjungpinang', 'pulau', 'malaysia', 'indonesia', 
+            'uang', 'barang', 'bagasi', 'dalam', 'atas', 'bawah', 'luar', 'depan', 'belakang',
+
+            # --- 7. Angka & Waktu ---
+            'satu', 'dua', 'tiga', 'kali', 'detik', 'bulan', 'tahun', 'waktu', 
+            'sekarang', 'nanti', 'besok', 'awal', 'akhir'
         }
+        
         self.all_stopwords = self.base_stopwords.union(self.custom_stopwords)
         
         # 4. Kamus Slang (Normalisasi bahasa gaul/singkatan)
@@ -47,7 +72,6 @@ class TextPreprocessor:
             'lm': 'lama', 'rmh': 'ramah', 'kcwa': 'kecewa', 'jlk': 'jelek', 'mntp': 'mantap',
             'skrg': 'sekarang', 'sy': 'saya', 'ak': 'aku', 'blm': 'belum'
         }
-
     def remove_emoji(self, text):
         return emoji.replace_emoji(text, replace='')
 
