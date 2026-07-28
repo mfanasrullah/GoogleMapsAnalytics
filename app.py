@@ -261,18 +261,42 @@ with tab1:
         
     st.markdown("---")
     
-    # Aspek Layanan (Dari kode kita sebelumnya)
+# Aspek Layanan 
     st.markdown("#### Analisis Aspek Keluhan & Pujian")
     if 'aspects' in df_working.columns and 'sentiment' in df_working.columns:
         summarizer = AspectSummarizer()
         df_aspect_summary = summarizer.get_aspect_sentiment_summary(
             df_working, aspect_col='aspects', sentiment_col='sentiment', location_col='pelabuhan'
         )
+        
+        # 1. PERBAIKAN LABEL SENTIMEN: Mengubah LABEL_0, 1, 2 menjadi teks yang mudah dibaca
+        label_mapping = {"LABEL_0": "NEGATIVE", "LABEL_1": "NEUTRAL", "LABEL_2": "POSITIVE"}
+        df_aspect_summary['sentiment'] = df_aspect_summary['sentiment'].replace(label_mapping)
+
+        # 2. PERBAIKAN GRAFIK DENGAN SPASI (facet_row_spacing)
         fig_aspect = px.bar(
-            df_aspect_summary, x='aspects', y='count', color='sentiment', facet_col='pelabuhan', facet_col_wrap=3,
+            df_aspect_summary, 
+            x='aspects', 
+            y='count', 
+            color='sentiment', 
+            facet_col='pelabuhan', 
+            facet_col_wrap=3,
+            facet_row_spacing=0.25, # <--- Menambah jarak vertikal antar baris grafik
             color_discrete_map={"POSITIVE":"green", "NEGATIVE":"red", "NEUTRAL":"gray"}
         )
-        fig_aspect.update_xaxes(matches=None, showticklabels=True)
+        
+        # 3. PERBAIKAN TAMPILAN LABEL DAN JUDUL
+        fig_aspect.update_layout(
+            height=700, # Mempertinggi kanvas agar tidak berdesakan
+            showlegend=True
+        )
+        
+        # Memiringkan teks sumbu X agar lebih rapi
+        fig_aspect.update_xaxes(matches=None, showticklabels=True, tickangle=-45)
+        
+        # Menghapus tulisan "pelabuhan=" di setiap judul grafik kecil agar lebih bersih
+        fig_aspect.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
+        
         st.plotly_chart(fig_aspect, use_container_width=True)
 
 with tab2:
