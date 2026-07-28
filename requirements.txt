@@ -1,0 +1,15 @@
+pandas
+numpy
+selenium
+webdriver-manager
+beautifulsoup4
+streamlit
+transformers
+torch
+bertopic
+deep-translator
+langdetect
+Sastrawi
+matplotlib
+seaborn
+plotly
