@@ -280,8 +280,8 @@ with tab2:
     
     with col_wc:
         st.markdown("#### Visualisasi WordCloud")
-        if 'clean_text' in df_working.columns or 'review_text' in df_working.columns:
-            teks_kolom = 'clean_text' if 'clean_text' in df_working.columns else 'review_text'
+        if 'final_text' in df_working.columns or 'review_text' in df_working.columns:
+            teks_kolom = 'final_text' if 'final_text' in df_working.columns else 'review_text'
             semua_teks = " ".join(df_working[teks_kolom].dropna().astype(str))
             
             if semua_teks.strip(): 
