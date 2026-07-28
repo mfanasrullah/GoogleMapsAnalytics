@@ -31,6 +31,9 @@ class TextPreprocessor:
             'bintan', 'tanjung', 'pinang', 'kapal', 'tiket', 'nya', 'yg', 'di', 'ke', 'dari', 
             'ini', 'itu', 'untuk', 'dan', 'dengan', 'ada', 'tidak', 'bisa', 'sudah', 'sangat',
             'tempat', 'kalau', 'buat', 'juga', 'aja', 'sih', 'ya', 'yang'
+# --- TAMBAHKAN KATA INGGRIS & KATA LAINNYA DI SINI ---
+            'time', 'dont', 'told', 'staff', 'good', 'nice', 'very', 'just', 'only',
+            'penumpang', 'orang', 'menit', 'jam', 'hari', 'nya', 'yg', 'di', 'ke', 'dari'
         }
         self.all_stopwords = self.base_stopwords.union(self.custom_stopwords)
         
