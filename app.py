@@ -89,8 +89,6 @@ def parse_gmaps_time(time_str):
 # ==========================================
 # 2. FUNGSI UNTUK MEMUAT DATA & MODEL
 # ==========================================
-# PERUBAHAN CACHE: Menambahkan ttl="1d" agar cache kadaluarsa setiap 24 jam.
-# Ini memaksa Streamlit membaca file CSV baru setelah GitHub Actions selesai update.
 @st.cache_data(ttl="1d") 
 def load_data():
     file_path = os.path.join(DATA_PROCESSED, "final_dataset.csv")
@@ -145,7 +143,7 @@ with st.sidebar:
     
     st.markdown("## Pusat Data Pelabuhan")
     
-    # --- TOMBOL REFRESH MANUAL (OPSIONAL) ---
+    # --- TOMBOL REFRESH MANUAL ---
     if st.button("🔄 Segarkan Data Sekarang"):
         st.cache_data.clear()
         st.rerun()
@@ -279,7 +277,7 @@ with tab1:
     st.markdown("---")
     
     # ==============================================================
-    # PERBAIKAN GRAFIK: ASPEK LAYANAN (ESTETIKA & URUTAN)
+    # PERBAIKAN GRAFIK: ASPEK LAYANAN (FULL BAHASA INDONESIA)
     # ==============================================================
     st.markdown("#### Analisis Aspek Keluhan & Pujian")
     if 'aspects' in df_working.columns and 'sentiment' in df_working.columns:
@@ -288,11 +286,16 @@ with tab1:
             df_working, aspect_col='aspects', sentiment_col='sentiment', location_col='pelabuhan'
         )
         
-        # 1. PERBAIKAN LABEL & MENGUNCI URUTAN TUMPUKAN BAR
-        # Ini memastikan bahwa Positif ada di tumpukan bawah/atas secara konsisten
-        urutan_sentimen = ["POSITIVE", "NEUTRAL", "NEGATIVE"]
+        # 1. TRANSLASI KE BAHASA INDONESIA (Mencakup data baru & lama)
+        label_mapping = {
+            "LABEL_0": "POSITIF", "LABEL_1": "NETRAL", "LABEL_2": "NEGATIF",
+            "POSITIVE": "POSITIF", "NEUTRAL": "NETRAL", "NEGATIVE": "NEGATIF"
+        }
+        df_aspect_summary['sentiment'] = df_aspect_summary['sentiment'].replace(label_mapping)
+
+        # 2. URUTAN & WARNA
+        urutan_sentimen = ["POSITIF", "NETRAL", "NEGATIF"]
         
-        # 2. PEMBUATAN GRAFIK DENGAN WARNA MATERIAL DESIGN
         fig_aspect = px.bar(
             df_aspect_summary, 
             x='aspects', 
@@ -301,51 +304,35 @@ with tab1:
             facet_col='pelabuhan', 
             facet_col_wrap=3,
             facet_row_spacing=0.25, 
-            facet_col_spacing=0.08, # Merapatkan jarak antar kolom
+            facet_col_spacing=0.08, 
             category_orders={"sentiment": urutan_sentimen}, 
             color_discrete_map={
-                "POSITIVE": "#2E7D32", # Hijau elegan / soft green
-                "NEUTRAL": "#B0BEC5",  # Abu-abu kebiruan
-                "NEGATIVE": "#E53935"  # Merah yang tidak menusuk mata
+                "POSITIF": "#2E7D32", # Hijau
+                "NETRAL": "#B0BEC5",  # Abu-abu
+                "NEGATIF": "#E53935"  # Merah
             },
             labels={'aspects': '', 'count': 'Jumlah Ulasan', 'sentiment': 'Sentimen:'}
         )
         
-        # 3. KUSTOMISASI LAYOUT TINGKAT LANJUT (PERCANTIK)
+        # 3. KUSTOMISASI LAYOUT TINGKAT LANJUT
         fig_aspect.update_layout(
             height=700, 
-            plot_bgcolor='rgba(0,0,0,0)', # Menghapus background abu-abu bawaan
+            plot_bgcolor='rgba(0,0,0,0)', 
             paper_bgcolor='rgba(0,0,0,0)',
             font=dict(family="Arial", size=12, color="#424242"),
-            margin=dict(t=100, b=50), # Menambah jarak atas untuk legend
+            margin=dict(t=100, b=50), 
             legend=dict(
-                orientation="h", # Legend dipindah ke atas secara horizontal
+                orientation="h", 
                 yanchor="bottom",
                 y=1.05,
                 xanchor="center",
                 x=0.5,
-                title_font=dict(size=1) # Menyembunyikan kata "Sentimen:" di legend
+                title_font=dict(size=1) 
             )
         )
         
-        # Memiringkan teks sumbu X dan mematikan grid garis vertikal
-        fig_aspect.update_xaxes(
-            matches=None, 
-            showticklabels=True, 
-            tickangle=-45,
-            showgrid=False,
-            title_text='' # Menghapus tulisan "aspects" yang tidak perlu
-        )
-        
-        # Menambah garis grid tipis di sumbu Y agar mudah dibaca jumlahnya
-        fig_aspect.update_yaxes(
-            showgrid=True, 
-            gridwidth=1, 
-            gridcolor='#EEEEEE',
-            title_text=''
-        )
-        
-        # Menebalkan (Bold) nama pelabuhan di atas grafik dan menghapus awalan pelabuhan=
+        fig_aspect.update_xaxes(matches=None, showticklabels=True, tickangle=-45, showgrid=False, title_text='')
+        fig_aspect.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#EEEEEE', title_text='')
         fig_aspect.for_each_annotation(lambda a: a.update(text=f"<b>{a.text.split('=')[-1]}</b>", font=dict(size=14)))
         
         st.plotly_chart(fig_aspect, use_container_width=True)
@@ -419,24 +406,36 @@ with tab3:
                         raw_label = hasil_prediksi['label']
                         skor = hasil_prediksi['score']
                     
-                    # 1. PERBAIKAN TRANSLASI LABEL MESIN KE MANUSIA
-                    label_mapping_ai = {"LABEL_0": "POSITIVE", "LABEL_1": "NEUTRAL", "LABEL_2": "NEGATIVE"}
+                    # ==========================================================
+                    # PERBAIKAN: MENAMPILKAN KATA POSITIF / NEGATIF BUKAN LABEL
+                    # ==========================================================
+                    label_mapping_ai = {
+                        "LABEL_0": "POSITIF", 
+                        "LABEL_1": "NETRAL", 
+                        "LABEL_2": "NEGATIF"
+                    }
                     prediksi = label_mapping_ai.get(raw_label, raw_label)
                     
+                    # (Berjaga-jaga jika output mesin memunculkan kata Inggris)
+                    if prediksi == "POSITIVE": prediksi = "POSITIF"
+                    if prediksi == "NEGATIVE": prediksi = "NEGATIF"
+                    if prediksi == "NEUTRAL": prediksi = "NETRAL"
+                    
                     result_col1, result_col2 = st.columns(2)
-                    warna = "green" if prediksi == "POSITIVE" else "red" if prediksi == "NEGATIVE" else "gray"
+                    warna = "green" if prediksi == "POSITIF" else "red" if prediksi == "NEGATIF" else "gray"
                     
                     with result_col1:
-                        st.markdown(f"<div style='border: 1px solid lightgray; padding: 10px; border-radius: 5px;'>Hasil Deteksi Model: <b style='color:{warna}; font-size: 20px;'>{prediksi.upper()}</b></div>", unsafe_allow_html=True)
+                        # Output sekarang akan bertuliskan "POSITIF", "NEGATIF", atau "NETRAL"
+                        st.markdown(f"<div style='border: 1px solid lightgray; padding: 10px; border-radius: 5px;'>Hasil Prediksi AI:<br><b style='color:{warna}; font-size: 24px;'>{prediksi.upper()}</b></div>", unsafe_allow_html=True)
                     
                     with result_col2:
-                        st.write("**Keyakinan Model (Probabilitas):**")
+                        st.write("**Tingkat Keyakinan (Probabilitas):**")
                         
-                        # 2. PERBAIKAN LOGIKA MATEMATIKA PROBABILITAS
-                        if prediksi == "POSITIVE":
+                        # PERBAIKAN LOGIKA MATEMATIKA PROBABILITAS
+                        if prediksi == "POSITIF":
                             prob_positive = skor
                             prob_negative = 1.0 - skor
-                        elif prediksi == "NEGATIVE":
+                        elif prediksi == "NEGATIF":
                             prob_positive = 1.0 - skor
                             prob_negative = skor
                         else: # Jika Netral
@@ -472,10 +471,10 @@ with tab3:
                         else:
                             st.info("**Kata Negatif Terdeteksi:**\n\n0 kata.")
                             
-                    if prediksi == "POSITIVE" and (jml_neg > jml_pos):
+                    if prediksi == "POSITIF" and (jml_neg > jml_pos):
                         st.warning("💡 **Catatan Analisis:** Model menyimpulkan ulasan ini **Positif**, meskipun terdapat lebih banyak kata bernada negatif. Hal ini terjadi karena model IndoBERT memahami konteks kalimat utuh (misal: kata penyangkalan 'tidak buruk').")
                         
-                    elif prediksi == "NEGATIVE" and (jml_pos > jml_neg):
+                    elif prediksi == "NEGATIF" and (jml_pos > jml_neg):
                         st.warning("💡 **Catatan Analisis:** Model menyimpulkan ulasan ini **Negatif**, meskipun terdapat lebih banyak kata bernada positif. Harap perhatikan konteks kalimat (misal: sarkasme).")
 
 # ==========================================
