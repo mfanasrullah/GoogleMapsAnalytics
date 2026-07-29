@@ -53,7 +53,7 @@ def load_logo():
 logo_polibatam = load_logo()
 
 # ==========================================
-# PERBAIKAN: FUNGSI PARSING WAKTU DUA BAHASA (ID & EN)
+# FUNGSI PARSING WAKTU DUA BAHASA (ID & EN)
 # ==========================================
 def parse_gmaps_time(time_str):
     if pd.isna(time_str) or str(time_str).strip() == "": 
@@ -118,7 +118,6 @@ def load_data():
 
 @st.cache_resource
 def load_model():
-    # Menggunakan IndoBERT yang sudah di-setup sebelumnya, bukan .pkl
     return SentimentAnalyzer()
 
 df_full = load_data()
@@ -277,7 +276,7 @@ with tab1:
     st.markdown("---")
     
     # ==============================================================
-    # PERBAIKAN GRAFIK: ASPEK LAYANAN (FULL BAHASA INDONESIA)
+    # GRAFIK ASPEK LAYANAN (DENGAN URUTAN YANG BENAR)
     # ==============================================================
     st.markdown("#### Analisis Aspek Keluhan & Pujian")
     if 'aspects' in df_working.columns and 'sentiment' in df_working.columns:
@@ -286,15 +285,17 @@ with tab1:
             df_working, aspect_col='aspects', sentiment_col='sentiment', location_col='pelabuhan'
         )
         
-        # 1. TRANSLASI KE BAHASA INDONESIA (Mencakup data baru & lama)
+        # 1. TRANSLASI KE BAHASA INDONESIA
         label_mapping = {
             "LABEL_0": "POSITIF", "LABEL_1": "NETRAL", "LABEL_2": "NEGATIF",
             "POSITIVE": "POSITIF", "NEUTRAL": "NETRAL", "NEGATIVE": "NEGATIF"
         }
         df_aspect_summary['sentiment'] = df_aspect_summary['sentiment'].replace(label_mapping)
 
-        # 2. URUTAN & WARNA
-        urutan_sentimen = ["POSITIF", "NETRAL", "NEGATIF"]
+        # 2. MENGUNCI URUTAN DARI BAWAH KE ATAS DI GRAFIK BAR
+        # Plotly menggambar balok dari bawah (0) ke atas.
+        # Agar Negatif ada di bawah, Netral di tengah, Positif di atas:
+        urutan_sentimen = ["NEGATIF", "NETRAL", "POSITIF"]
         
         fig_aspect = px.bar(
             df_aspect_summary, 
@@ -406,9 +407,6 @@ with tab3:
                         raw_label = hasil_prediksi['label']
                         skor = hasil_prediksi['score']
                     
-                    # ==========================================================
-                    # PERBAIKAN: MENAMPILKAN KATA POSITIF / NEGATIF BUKAN LABEL
-                    # ==========================================================
                     label_mapping_ai = {
                         "LABEL_0": "POSITIF", 
                         "LABEL_1": "NETRAL", 
@@ -416,7 +414,6 @@ with tab3:
                     }
                     prediksi = label_mapping_ai.get(raw_label, raw_label)
                     
-                    # (Berjaga-jaga jika output mesin memunculkan kata Inggris)
                     if prediksi == "POSITIVE": prediksi = "POSITIF"
                     if prediksi == "NEGATIVE": prediksi = "NEGATIF"
                     if prediksi == "NEUTRAL": prediksi = "NETRAL"
@@ -425,13 +422,11 @@ with tab3:
                     warna = "green" if prediksi == "POSITIF" else "red" if prediksi == "NEGATIF" else "gray"
                     
                     with result_col1:
-                        # Output sekarang akan bertuliskan "POSITIF", "NEGATIF", atau "NETRAL"
                         st.markdown(f"<div style='border: 1px solid lightgray; padding: 10px; border-radius: 5px;'>Hasil Prediksi AI:<br><b style='color:{warna}; font-size: 24px;'>{prediksi.upper()}</b></div>", unsafe_allow_html=True)
                     
                     with result_col2:
                         st.write("**Tingkat Keyakinan (Probabilitas):**")
                         
-                        # PERBAIKAN LOGIKA MATEMATIKA PROBABILITAS
                         if prediksi == "POSITIF":
                             prob_positive = skor
                             prob_negative = 1.0 - skor
