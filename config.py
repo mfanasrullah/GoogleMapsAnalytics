@@ -8,8 +8,12 @@ DATA_PROCESSED = os.path.join(BASE_DIR, 'data', 'processed')
 # Menggunakan Dictionary untuk menyimpan Direct URL
 # Parameter hl=en diubah menjadi hl=id agar UI Google Maps konsisten berbahasa Indonesia
 TARGET_LOCATIONS = {
-    "Pemanasan Browser": "https://www.google.com/maps",
-    "Batam Centre Ferry Terminal": "https://www.google.com/maps/place/Batam+Centre+Point+International+Ferry+Terminal/data=!4m7!3m6!1s0x31d9891d13f27f6b:0xadc0424017784eed!8m2!3d1.1307223!4d104.0551943!16s%2Fg%2F1pztqj9mj!19sChIJa3_yEx2J2TER7U54F0BCwK0?authuser=0&hl=en&rclk=1",
+    "Pemanasan Browser": "https://www.google.com/maps/place/Politeknik+Negeri+Batam",
+    # --- BATAM CENTRE DIPECAH JADI 2 LINK ---
+    "Batam Centre Ferry Terminal (A)": "https://www.google.com/maps/place/Batam+Center+International+Ferry+Terminal/data=!4m7!3m6!1s0x31d988fd04f61e15:0x6ded49c5814062a5!8m2!3d1.130607!4d104.0553512!16s%2Fg%2F11f1222m2p!19sChIJFR72BP2I2TERpWJAgcVJ7W0?authuser=0&hl=id&rclk=1",
+
+"Batam Centre Ferry Terminal (B)": "https://www.google.com/maps/place/Batam+Centre+Point+International+Ferry+Terminal/data=!4m7!3m6!1s0x31d9891d13f27f6b:0xadc0424017784eed!8m2!3d1.1307223!4d104.0551943!16s%2Fg%2F1pztqj9mj!19sChIJa3_yEx2J2TER7U54F0BCwK0?authuser=0&hl=id&rclk=1",
+    # ----------------------------------------
     "Harbour Bay Ferry Terminal": "https://www.google.com/maps/place/Harbour+Bay+Ferry/data=!4m7!3m6!1s0x31d98a235c935fb5:0x1babbd4c3e3fb7df!8m2!3d1.1533325!4d103.9968005!16s%2Fg%2F1pt_822vb!19sChIJtV-TXCOK2TER37c_Pky9qxs?authuser=0&hl=id&rclk=1",
     "Sekupang Ferry Terminal": "https://www.google.com/maps/place/SEKUPANG+INTERNATIONAL+FERRY+TERMINAL/data=!4m7!3m6!1s0xa925df7bfe758abb:0x20faa8488771bd65!8m2!3d1.1250921!4d103.925189!16s%2Fg%2F11ytq0szhl!19sChIJu4p1_nvfJakRZb1xh0io-iA?authuser=0&hl=id&rclk=1",
     "Telaga Punggur Ferry Terminal": "https://www.google.com/maps/place/Telaga+Punggur+Ferry+Terminal/data=!4m7!3m6!1s0x31d985307942cd99:0x455a41a413648f4a!8m2!3d1.0350946!4d104.133273!16s%2Fg%2F11c1qxnrl4!19sChIJmc1CeTCF2TERSo9kE6RBWkU?authuser=0&hl=id&rclk=1",
