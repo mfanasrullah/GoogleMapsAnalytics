@@ -286,8 +286,8 @@ with tab1:
             df_working, aspect_col='aspects', sentiment_col='sentiment', location_col='pelabuhan'
         )
         
-        # 1. PERBAIKAN LABEL SENTIMEN: Mengubah LABEL_0, 1, 2 menjadi teks yang mudah dibaca
-        label_mapping = {"LABEL_0": "NEGATIVE", "LABEL_1": "NEUTRAL", "LABEL_2": "POSITIVE"}
+        # 1. PERBAIKAN LABEL SENTIMEN: Disesuaikan dengan model AI Anda
+        label_mapping = {"LABEL_0": "POSITIVE", "LABEL_1": "NEUTRAL", "LABEL_2": "NEGATIVE"}
         df_aspect_summary['sentiment'] = df_aspect_summary['sentiment'].replace(label_mapping)
 
         # 2. PERBAIKAN GRAFIK DENGAN SPASI (facet_row_spacing)
@@ -382,8 +382,12 @@ with tab3:
                     # Prediksi menggunakan IndoBERT Pipeline
                     with st.spinner('Menganalisis teks menggunakan IndoBERT...'):
                         hasil_prediksi = model.nlp(user_input[:512])[0]
-                        prediksi = hasil_prediksi['label']
+                        raw_label = hasil_prediksi['label']
                         skor = hasil_prediksi['score']
+                    
+                    # 1. PERBAIKAN TRANSLASI LABEL MESIN KE MANUSIA
+                    label_mapping_ai = {"LABEL_0": "POSITIVE", "LABEL_1": "NEUTRAL", "LABEL_2": "NEGATIVE"}
+                    prediksi = label_mapping_ai.get(raw_label, raw_label)
                     
                     result_col1, result_col2 = st.columns(2)
                     warna = "green" if prediksi == "POSITIVE" else "red" if prediksi == "NEGATIVE" else "gray"
@@ -393,9 +397,17 @@ with tab3:
                     
                     with result_col2:
                         st.write("**Keyakinan Model (Probabilitas):**")
-                        # Kalkulasi probabilitas visual
-                        prob_positive = skor if prediksi == "POSITIVE" else (1 - skor)
-                        prob_negative = skor if prediksi == "NEGATIVE" else (1 - skor)
+                        
+                        # 2. PERBAIKAN LOGIKA MATEMATIKA PROBABILITAS
+                        if prediksi == "POSITIVE":
+                            prob_positive = skor
+                            prob_negative = 1.0 - skor
+                        elif prediksi == "NEGATIVE":
+                            prob_positive = 1.0 - skor
+                            prob_negative = skor
+                        else: # Jika Netral
+                            prob_positive = (1.0 - skor) / 2
+                            prob_negative = (1.0 - skor) / 2
                         
                         st.progress(float(prob_positive), text=f"Positif: {prob_positive:.1%}")
                         st.progress(float(prob_negative), text=f"Negatif: {prob_negative:.1%}")
