@@ -52,28 +52,37 @@ def load_logo():
 
 logo_polibatam = load_logo()
 
-# Fungsi Parsing Waktu Google Maps (misal: "2 bulan lalu" menjadi Datetime)
+# ==========================================
+# PERBAIKAN: FUNGSI PARSING WAKTU DUA BAHASA (ID & EN)
+# ==========================================
 def parse_gmaps_time(time_str):
-    if pd.isna(time_str): return datetime.now()
+    if pd.isna(time_str) or str(time_str).strip() == "": 
+        return datetime.now()
+        
     time_str = str(time_str).lower()
     now = datetime.now()
     
-    if 'sebulan' in time_str: return now - timedelta(days=30)
-    if 'setahun' in time_str: return now - timedelta(days=365)
-    if 'seminggu' in time_str: return now - timedelta(days=7)
-    if 'sehari' in time_str: return now - timedelta(days=1)
-    if 'sejam' in time_str: return now - timedelta(hours=1)
-    if 'baru saja' in time_str: return now
+    # 1. Pengecekan awalan (sebulan / a month)
+    if any(x in time_str for x in ['sebulan', 'a month', '1 month']): return now - timedelta(days=30)
+    if any(x in time_str for x in ['setahun', 'a year', '1 year']): return now - timedelta(days=365)
+    if any(x in time_str for x in ['seminggu', 'a week', '1 week']): return now - timedelta(days=7)
+    if any(x in time_str for x in ['sehari', 'a day', '1 day']): return now - timedelta(days=1)
+    if any(x in time_str for x in ['sejam', 'an hour', '1 hour']): return now - timedelta(hours=1)
+    if any(x in time_str for x in ['baru saja', 'just now', 'minutes']): return now
     
+    # 2. Ekstrak angka (misal "2 bulan lalu" / "2 months ago" -> 2)
     num = re.findall(r'\d+', time_str)
-    if not num: return now
+    if not num: 
+        return now
+        
     num = int(num[0])
     
-    if 'tahun' in time_str: return now - timedelta(days=num*365)
-    if 'bulan' in time_str: return now - timedelta(days=num*30)
-    if 'minggu' in time_str: return now - timedelta(days=num*7)
-    if 'hari' in time_str: return now - timedelta(days=num)
-    if 'jam' in time_str: return now - timedelta(hours=num)
+    # 3. Pengecekan unit waktu
+    if 'tahun' in time_str or 'year' in time_str: return now - timedelta(days=num*365)
+    if 'bulan' in time_str or 'month' in time_str: return now - timedelta(days=num*30)
+    if 'minggu' in time_str or 'week' in time_str: return now - timedelta(days=num*7)
+    if 'hari' in time_str or 'day' in time_str: return now - timedelta(days=num)
+    if 'jam' in time_str or 'hour' in time_str: return now - timedelta(hours=num)
     
     return now
 
