@@ -302,7 +302,7 @@ with tab1:
             color='sentiment', 
             facet_col='pelabuhan', 
             facet_col_wrap=3,
-            facet_row_spacing=0.4,   # <-- PERBAIKAN: Spasi antar baris diperbesar agar teks tidak menabrak
+            facet_row_spacing=0.4,   
             facet_col_spacing=0.08, 
             category_orders={"sentiment": urutan_sentimen}, 
             color_discrete_map={
@@ -315,7 +315,7 @@ with tab1:
         
         # 3. KUSTOMISASI LAYOUT TINGKAT LANJUT
         fig_aspect.update_layout(
-            height=900,              # <-- PERBAIKAN: Kanvas ditinggikan agar baris bawah punya ruang lega
+            height=900,              
             plot_bgcolor='rgba(0,0,0,0)', 
             paper_bgcolor='rgba(0,0,0,0)',
             font=dict(family="Arial", size=12, color="#424242"),
@@ -385,8 +385,23 @@ with tab3:
     if model is None:
         st.error("Model Machine Learning belum tersedia. Fitur prediksi dinonaktifkan.")
     else:
-        kamus_positif = {'bagus', 'baik', 'cepat', 'bersih', 'ramah', 'nyaman', 'keren', 'mantap', 'memuaskan', 'mudah', 'rapi', 'aman', 'lancar', 'terbaik', 'puas', 'indah', 'luas', 'modern', 'sip', 'jos'}
-        kamus_negatif = {'buruk', 'lambat', 'kotor', 'mahal', 'antri', 'jelek', 'kecewa', 'sulit', 'lama', 'ribet', 'bising', 'bau', 'rusak', 'berantakan', 'parah', 'kurang', 'sempit', 'macet', 'panas', 'kacau'}
+        # ==============================================================
+        # PERBAIKAN: KAMUS DITAMBAH KOSAKATA BAHASA INGGRIS YANG UMUM
+        # ==============================================================
+        kamus_positif = {
+            'bagus', 'baik', 'cepat', 'bersih', 'ramah', 'nyaman', 'keren', 'mantap', 
+            'memuaskan', 'mudah', 'rapi', 'aman', 'lancar', 'terbaik', 'puas', 'indah', 
+            'luas', 'modern', 'sip', 'jos', 
+            'friendly', 'good', 'nice', 'clean', 'fast', 'comfortable', 'great', 
+            'awesome', 'best', 'helpful', 'excellent', 'smooth'
+        }
+        kamus_negatif = {
+            'buruk', 'lambat', 'kotor', 'mahal', 'antri', 'jelek', 'kecewa', 'sulit', 
+            'lama', 'ribet', 'bising', 'bau', 'rusak', 'berantakan', 'parah', 'kurang', 
+            'sempit', 'macet', 'panas', 'kacau',
+            'bad', 'slow', 'dirty', 'expensive', 'crowded', 'queue', 'disappointed', 
+            'hard', 'difficult', 'noisy', 'smelly', 'broken', 'messy', 'worst', 'hot'
+        }
         
         def clean_text(text):
             text = str(text).lower()
