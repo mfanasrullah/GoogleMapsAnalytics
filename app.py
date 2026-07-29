@@ -276,7 +276,7 @@ with tab1:
     st.markdown("---")
     
     # ==============================================================
-    # GRAFIK ASPEK LAYANAN (DENGAN URUTAN YANG BENAR)
+    # GRAFIK ASPEK LAYANAN (DENGAN URUTAN YANG BENAR & SPASI LUAS)
     # ==============================================================
     st.markdown("#### Analisis Aspek Keluhan & Pujian")
     if 'aspects' in df_working.columns and 'sentiment' in df_working.columns:
@@ -293,8 +293,6 @@ with tab1:
         df_aspect_summary['sentiment'] = df_aspect_summary['sentiment'].replace(label_mapping)
 
         # 2. MENGUNCI URUTAN DARI BAWAH KE ATAS DI GRAFIK BAR
-        # Plotly menggambar balok dari bawah (0) ke atas.
-        # Agar Negatif ada di bawah, Netral di tengah, Positif di atas:
         urutan_sentimen = ["NEGATIF", "NETRAL", "POSITIF"]
         
         fig_aspect = px.bar(
@@ -304,7 +302,7 @@ with tab1:
             color='sentiment', 
             facet_col='pelabuhan', 
             facet_col_wrap=3,
-            facet_row_spacing=0.25, 
+            facet_row_spacing=0.4,   # <-- PERBAIKAN: Spasi antar baris diperbesar agar teks tidak menabrak
             facet_col_spacing=0.08, 
             category_orders={"sentiment": urutan_sentimen}, 
             color_discrete_map={
@@ -317,7 +315,7 @@ with tab1:
         
         # 3. KUSTOMISASI LAYOUT TINGKAT LANJUT
         fig_aspect.update_layout(
-            height=700, 
+            height=900,              # <-- PERBAIKAN: Kanvas ditinggikan agar baris bawah punya ruang lega
             plot_bgcolor='rgba(0,0,0,0)', 
             paper_bgcolor='rgba(0,0,0,0)',
             font=dict(family="Arial", size=12, color="#424242"),
