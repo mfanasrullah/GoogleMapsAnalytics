@@ -72,6 +72,7 @@ class TextPreprocessor:
             'lm': 'lama', 'rmh': 'ramah', 'kcwa': 'kecewa', 'jlk': 'jelek', 'mntp': 'mantap',
             'skrg': 'sekarang', 'sy': 'saya', 'ak': 'aku', 'blm': 'belum'
         }
+
     def remove_emoji(self, text):
         return emoji.replace_emoji(text, replace='')
 
@@ -148,6 +149,16 @@ class TextPreprocessor:
             return df
             
         print(f"Total data awal: {len(df)} baris")
+
+        # ======================================================================
+        # PENGGABUNGAN NAMA LOKASI GANDA (BATAM CENTRE)
+        # ======================================================================
+        if 'location' in df.columns:
+            df['location'] = df['location'].replace({
+                'Batam Centre Ferry Terminal (A)': 'Batam Centre Ferry Terminal',
+                'Batam Centre Ferry Terminal (B)': 'Batam Centre Ferry Terminal'
+            })
+            print("Penggabungan lokasi Batam Centre selesai dilakukan.")
         
         # Menghapus Duplikat berdasarkan teks ulasan
         df = df.drop_duplicates(subset=[text_col])
