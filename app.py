@@ -278,7 +278,9 @@ with tab1:
         
     st.markdown("---")
     
-    # Aspek Layanan 
+    # ==============================================================
+    # PERBAIKAN GRAFIK: ASPEK LAYANAN (ESTETIKA & URUTAN)
+    # ==============================================================
     st.markdown("#### Analisis Aspek Keluhan & Pujian")
     if 'aspects' in df_working.columns and 'sentiment' in df_working.columns:
         summarizer = AspectSummarizer()
@@ -286,11 +288,11 @@ with tab1:
             df_working, aspect_col='aspects', sentiment_col='sentiment', location_col='pelabuhan'
         )
         
-        # 1. PERBAIKAN LABEL SENTIMEN: Disesuaikan dengan model AI Anda
-        label_mapping = {"LABEL_0": "POSITIVE", "LABEL_1": "NEUTRAL", "LABEL_2": "NEGATIVE"}
-        df_aspect_summary['sentiment'] = df_aspect_summary['sentiment'].replace(label_mapping)
-
-        # 2. PERBAIKAN GRAFIK DENGAN SPASI (facet_row_spacing)
+        # 1. PERBAIKAN LABEL & MENGUNCI URUTAN TUMPUKAN BAR
+        # Ini memastikan bahwa Positif ada di tumpukan bawah/atas secara konsisten
+        urutan_sentimen = ["POSITIVE", "NEUTRAL", "NEGATIVE"]
+        
+        # 2. PEMBUATAN GRAFIK DENGAN WARNA MATERIAL DESIGN
         fig_aspect = px.bar(
             df_aspect_summary, 
             x='aspects', 
@@ -298,21 +300,53 @@ with tab1:
             color='sentiment', 
             facet_col='pelabuhan', 
             facet_col_wrap=3,
-            facet_row_spacing=0.25, # <--- Menambah jarak vertikal antar baris grafik
-            color_discrete_map={"POSITIVE":"green", "NEGATIVE":"red", "NEUTRAL":"gray"}
+            facet_row_spacing=0.25, 
+            facet_col_spacing=0.08, # Merapatkan jarak antar kolom
+            category_orders={"sentiment": urutan_sentimen}, 
+            color_discrete_map={
+                "POSITIVE": "#2E7D32", # Hijau elegan / soft green
+                "NEUTRAL": "#B0BEC5",  # Abu-abu kebiruan
+                "NEGATIVE": "#E53935"  # Merah yang tidak menusuk mata
+            },
+            labels={'aspects': '', 'count': 'Jumlah Ulasan', 'sentiment': 'Sentimen:'}
         )
         
-        # 3. PERBAIKAN TAMPILAN LABEL DAN JUDUL
+        # 3. KUSTOMISASI LAYOUT TINGKAT LANJUT (PERCANTIK)
         fig_aspect.update_layout(
-            height=700, # Mempertinggi kanvas agar tidak berdesakan
-            showlegend=True
+            height=700, 
+            plot_bgcolor='rgba(0,0,0,0)', # Menghapus background abu-abu bawaan
+            paper_bgcolor='rgba(0,0,0,0)',
+            font=dict(family="Arial", size=12, color="#424242"),
+            margin=dict(t=100, b=50), # Menambah jarak atas untuk legend
+            legend=dict(
+                orientation="h", # Legend dipindah ke atas secara horizontal
+                yanchor="bottom",
+                y=1.05,
+                xanchor="center",
+                x=0.5,
+                title_font=dict(size=1) # Menyembunyikan kata "Sentimen:" di legend
+            )
         )
         
-        # Memiringkan teks sumbu X agar lebih rapi
-        fig_aspect.update_xaxes(matches=None, showticklabels=True, tickangle=-45)
+        # Memiringkan teks sumbu X dan mematikan grid garis vertikal
+        fig_aspect.update_xaxes(
+            matches=None, 
+            showticklabels=True, 
+            tickangle=-45,
+            showgrid=False,
+            title_text='' # Menghapus tulisan "aspects" yang tidak perlu
+        )
         
-        # Menghapus tulisan "pelabuhan=" di setiap judul grafik kecil agar lebih bersih
-        fig_aspect.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
+        # Menambah garis grid tipis di sumbu Y agar mudah dibaca jumlahnya
+        fig_aspect.update_yaxes(
+            showgrid=True, 
+            gridwidth=1, 
+            gridcolor='#EEEEEE',
+            title_text=''
+        )
+        
+        # Menebalkan (Bold) nama pelabuhan di atas grafik dan menghapus awalan pelabuhan=
+        fig_aspect.for_each_annotation(lambda a: a.update(text=f"<b>{a.text.split('=')[-1]}</b>", font=dict(size=14)))
         
         st.plotly_chart(fig_aspect, use_container_width=True)
 
