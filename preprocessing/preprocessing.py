@@ -1,3 +1,4 @@
+# preprocessing.py
 import pandas as pd
 import re
 import emoji
@@ -57,7 +58,40 @@ class TextPreprocessor:
 
             # --- 7. Angka & Waktu ---
             'satu', 'dua', 'tiga', 'kali', 'detik', 'bulan', 'tahun', 'waktu', 
-            'sekarang', 'nanti', 'besok', 'awal', 'akhir'
+            'sekarang', 'nanti', 'besok', 'awal', 'akhir',
+            
+            # ======================================================================
+            # [BARU] 8. STOPWORDS INGGRIS (Dideteksi bocor dari CSV akibat gagal Translate)
+            # ======================================================================
+            'the', 'and', 'to', 'is', 'it', 'in', 'for', 'of', 'are', 'you', 'from', 
+            'not', 'there', 'this', 'with', 'on', 'at', 'but', 'be', 'as', 'so', 
+            'have', 'that', 'or', 'if', 'we', 'was', 'my', 'can', 'will', 'like', 
+            'no', 'your', 'about', 'they', 'what', 'which', 'who', 'when', 'where', 
+            'why', 'how', 'all', 'any', 'both', 'each', 'few', 'more', 'most', 'other', 
+            'some', 'such', 'nor', 'only', 'own', 'same', 'than', 'too', 'can', 
+            'will', 'don', 'should', 'now', 'am', 'were', 'been', 'being', 'has', 'had', 
+            'do', 'does', 'did', 'doing', 'an', 'because', 'until', 'while', 'by', 
+            'against', 'between', 'into', 'through', 'during', 'before', 'after', 
+            'above', 'below', 'up', 'down', 'out', 'off', 'over', 'under', 'again', 
+            'further', 'then', 'once', 'here',
+            
+            # ======================================================================
+            # [BARU] 9. KATA HUBUNG/KETERANGAN INDONESIA TAMBAHAN
+            # ======================================================================
+            'masih', 'mau', 'atau', 'jadi', 'akan', 'saat', 'lagi', 'perlu', 'jika', 
+            'lain', 'setelah', 'beberapa', 'sampai', 'oleh', 'tetapi', 'dapat', 'gak', 
+            'ga', 'agak', 'adalah', 'semua', 'sekitar', 'seperti', 'salah', 'saja', 
+            'pun', 'kok', 'kan', 'dong', 'deh', 'terus', 'padahal', 'bahwa', 'walaupun', 
+            'meskipun', 'sedang', 'telah', 'sering', 'kadang', 'jarang', 'pasti', 
+            'mungkin', 'boleh', 'wajib', 'serta',
+            
+            # ======================================================================
+            # [BARU] 10. KATA UMUM DOMAIN PELABUHAN YANG TIDAK MEMILIKI SENTIMEN
+            # ======================================================================
+            'port', 'area', 'place', 'taxi', 'taksi', 'kota', 'internasional', 
+            'international', 'immigration', 'small', 'penyeberangan', 'tujuan', 
+            'lantai', 'mobil', 'mall', 'laut', 'ticket', 'ruang', 'lokasi', 'tempatnya', 
+            'domestik', 'domestic', 'city', 'trip', 'travel', 'penumpang'
         }
         
         self.all_stopwords = self.base_stopwords.union(self.custom_stopwords)
@@ -70,7 +104,9 @@ class TextPreprocessor:
             'dgn': 'dengan', 'krn': 'karena', 'karna': 'karena', 'tp': 'tapi',
             'pdhl': 'padahal', 'jg': 'juga', 'cpt': 'cepat', 'lmbat': 'lambat',
             'lm': 'lama', 'rmh': 'ramah', 'kcwa': 'kecewa', 'jlk': 'jelek', 'mntp': 'mantap',
-            'skrg': 'sekarang', 'sy': 'saya', 'ak': 'aku', 'blm': 'belum'
+            'skrg': 'sekarang', 'sy': 'saya', 'ak': 'aku', 'blm': 'belum',
+            # Tambahan slang dari review negatif
+            'pdhl': 'padahal', 'gajelas': 'tidak jelas', 'trs': 'terus'
         }
 
     def remove_emoji(self, text):
