@@ -16,7 +16,7 @@ from config import TARGET_LOCATIONS, DATA_RAW
 class GoogleMapsScraper:
     def __init__(self):
         options = webdriver.ChromeOptions()
-        options.add_argument('--headless=false') 
+       # options.add_argument('--headless=false') 
         # SANGAT PENTING: Memaksa ukuran layar jadi Full HD agar tab Ulasan tidak tersembunyi
         options.add_argument('--window-size=1920,1080')
         options.add_argument('--lang=id')
@@ -29,7 +29,7 @@ class GoogleMapsScraper:
             return []
             
         self.driver.get(url)
-        wait = WebDriverWait(self.driver, 15)
+        wait = WebDriverWait(self.driver, 30)
 
         # 1. Tunggu dan klik tab "Ulasan"
         try:
