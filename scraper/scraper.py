@@ -21,6 +21,20 @@ class GoogleMapsScraper:
         options.add_argument('--window-size=1920,1080')
         options.add_argument('--lang=id')
         options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36')
+
+# ==============================================================
+        # TAMBAHAN BARU: LOAD PROFIL CHROME AGAR OTOMATIS LOGIN
+        # ==============================================================
+        # Sesuaikan path ini dengan lokasi User Data di laptop/PC Anda.
+        # Gunakan raw string (huruf 'r' di depan kutip) agar backslash terbaca dengan benar di Windows.
+        user_data_path = r"C:\Users\user\AppData\Local\Google\Chrome\User Data"
+        
+        options.add_argument(f"--user-data-dir={user_data_path}")
+        
+        # Jika Anda menggunakan profil utama, biasanya bernama "Default". 
+        # Jika profil lain, namanya bisa "Profile 1", "Profile 2", dst.
+        options.add_argument("--profile-directory=Profile 1") 
+        # ==============================================================
         
         self.driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
