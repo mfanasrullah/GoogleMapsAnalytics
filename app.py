@@ -9,6 +9,7 @@ import os
 import PIL.Image as PILImage
 from datetime import datetime, timedelta
 import plotly.express as px
+from deep_translator import GoogleTranslator
 
 # Import Modul Analitik kita
 from config import DATA_PROCESSED
@@ -38,7 +39,7 @@ hide_streamlit_style = """
             """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
-@st.cache_data(ttl="1d") # <-- Cache untuk logo juga bisa diberi TTL jika URL-nya dinamis
+@st.cache_data(ttl="1d")
 def load_logo():
     logo_path = 'image_0.png' 
     try:
@@ -62,7 +63,6 @@ def parse_gmaps_time(time_str):
     time_str = str(time_str).lower()
     now = datetime.now()
     
-    # 1. Pengecekan awalan (sebulan / a month)
     if any(x in time_str for x in ['sebulan', 'a month', '1 month']): return now - timedelta(days=30)
     if any(x in time_str for x in ['setahun', 'a year', '1 year']): return now - timedelta(days=365)
     if any(x in time_str for x in ['seminggu', 'a week', '1 week']): return now - timedelta(days=7)
@@ -70,14 +70,12 @@ def parse_gmaps_time(time_str):
     if any(x in time_str for x in ['sejam', 'an hour', '1 hour']): return now - timedelta(hours=1)
     if any(x in time_str for x in ['baru saja', 'just now', 'minutes']): return now
     
-    # 2. Ekstrak angka (misal "2 bulan lalu" / "2 months ago" -> 2)
     num = re.findall(r'\d+', time_str)
     if not num: 
         return now
         
     num = int(num[0])
     
-    # 3. Pengecekan unit waktu
     if 'tahun' in time_str or 'year' in time_str: return now - timedelta(days=num*365)
     if 'bulan' in time_str or 'month' in time_str: return now - timedelta(days=num*30)
     if 'minggu' in time_str or 'week' in time_str: return now - timedelta(days=num*7)
@@ -97,19 +95,15 @@ def load_data():
         
     df = pd.read_csv(file_path)
     
-    # Standarisasi Nama Kolom
     df = df.rename(columns={'location': 'pelabuhan', 'text': 'review_text'})
     
-    # Ekstraksi Rating (Dari "5 bintang" menjadi angka 5.0)
     if 'rating' in df.columns:
         df['review_rating'] = df['rating'].astype(str).str.extract(r'(\d+)').astype(float)
     
-    # Konversi Format Waktu
     if 'time' in df.columns:
         df['tanggal'] = df['time'].apply(parse_gmaps_time)
         df['bulan_tahun'] = df['tanggal'].dt.to_period('M').astype(str)
 
-    # Ekstraksi Aspek on-the-fly jika belum ada
     if 'final_text' in df.columns:
         extractor = AspectExtractor(method='rule-based')
         df = extractor.process_dataframe(df, text_column='final_text')
@@ -142,7 +136,6 @@ with st.sidebar:
     
     st.markdown("## Pusat Data Pelabuhan")
     
-    # --- TOMBOL REFRESH MANUAL ---
     if st.button("🔄 Segarkan Data Sekarang"):
         st.cache_data.clear()
         st.rerun()
@@ -275,9 +268,6 @@ with tab1:
         
     st.markdown("---")
     
-    # ==============================================================
-    # GRAFIK ASPEK LAYANAN (DENGAN URUTAN YANG BENAR & SPASI LUAS)
-    # ==============================================================
     st.markdown("#### Analisis Aspek Keluhan & Pujian")
     if 'aspects' in df_working.columns and 'sentiment' in df_working.columns:
         summarizer = AspectSummarizer()
@@ -285,14 +275,12 @@ with tab1:
             df_working, aspect_col='aspects', sentiment_col='sentiment', location_col='pelabuhan'
         )
         
-        # 1. TRANSLASI KE BAHASA INDONESIA
         label_mapping = {
             "LABEL_0": "POSITIF", "LABEL_1": "NETRAL", "LABEL_2": "NEGATIF",
             "POSITIVE": "POSITIF", "NEUTRAL": "NETRAL", "NEGATIVE": "NEGATIF"
         }
         df_aspect_summary['sentiment'] = df_aspect_summary['sentiment'].replace(label_mapping)
 
-        # 2. MENGUNCI URUTAN DARI BAWAH KE ATAS DI GRAFIK BAR
         urutan_sentimen = ["NEGATIF", "NETRAL", "POSITIF"]
         
         fig_aspect = px.bar(
@@ -306,14 +294,13 @@ with tab1:
             facet_col_spacing=0.08, 
             category_orders={"sentiment": urutan_sentimen}, 
             color_discrete_map={
-                "POSITIF": "#2E7D32", # Hijau
-                "NETRAL": "#B0BEC5",  # Abu-abu
-                "NEGATIF": "#E53935"  # Merah
+                "POSITIF": "#2E7D32", 
+                "NETRAL": "#B0BEC5",  
+                "NEGATIF": "#E53935"  
             },
             labels={'aspects': '', 'count': 'Jumlah Ulasan', 'sentiment': 'Sentimen:'}
         )
         
-        # 3. KUSTOMISASI LAYOUT TINGKAT LANJUT
         fig_aspect.update_layout(
             height=900,              
             plot_bgcolor='rgba(0,0,0,0)', 
@@ -357,7 +344,6 @@ with tab2:
     with col_hm:
         st.markdown("#### Heatmap Keluhan Konsumen")
         if 'bulan_tahun' in df_working.columns and 'review_rating' in df_working.columns:
-            # Filter hanya rating 1 dan 2 sebagai keluhan
             df_negatif = df_working[df_working['review_rating'] <= 2]
             
             if not df_negatif.empty:
@@ -386,21 +372,30 @@ with tab3:
         st.error("Model Machine Learning belum tersedia. Fitur prediksi dinonaktifkan.")
     else:
         # ==============================================================
-        # PERBAIKAN: KAMUS DITAMBAH KOSAKATA BAHASA INGGRIS YANG UMUM
+        # PERBAIKAN: KAMUS DITAMBAH HASIL ANALISIS DARI CSV
         # ==============================================================
         kamus_positif = {
             'bagus', 'baik', 'cepat', 'bersih', 'ramah', 'nyaman', 'keren', 'mantap', 
             'memuaskan', 'mudah', 'rapi', 'aman', 'lancar', 'terbaik', 'puas', 'indah', 
-            'luas', 'modern', 'sip', 'jos', 
-            'friendly', 'good', 'nice', 'clean', 'fast', 'comfortable', 'great', 
-            'awesome', 'best', 'helpful', 'excellent', 'smooth'
+            'luas', 'modern', 'sip', 'jos', 'lengkap', 'murah', 'tertata', 'tertib', 
+            'teratur', 'strategis', 'mewah', 'megah', 'terjangkau', 'sejuk', 'elegan', 'wangi',
+            'friendly', 'good', 'nice', 'clean', 'fast', 'quick', 'comfortable', 'great', 
+            'awesome', 'best', 'helpful', 'excellent', 'smooth', 'clearance',
+            'beautiful', 'organized', 'better', 'cool', 'easy', 'spacious', 'safe', 
+            'convenient', 'efficient', 'clear', 'calm', 'perfect', 'lovely', 'cheap', 
+            'top', 'affordable', 'relaxing', 'amazing'
         }
+        
         kamus_negatif = {
             'buruk', 'lambat', 'kotor', 'mahal', 'antri', 'jelek', 'kecewa', 'sulit', 
             'lama', 'ribet', 'bising', 'bau', 'rusak', 'berantakan', 'parah', 'kurang', 
-            'sempit', 'macet', 'panas', 'kacau',
+            'sempit', 'macet', 'panas', 'kacau', 'korupsi', 'kasar', 'jorok', 'kumuh', 
+            'lelet', 'sombong', 'bertele', 'sumpek', 'pengap', 'pesing', 'jutek', 'kusam',
             'bad', 'slow', 'dirty', 'expensive', 'crowded', 'queue', 'disappointed', 
-            'hard', 'difficult', 'noisy', 'smelly', 'broken', 'messy', 'worst', 'hot'
+            'hard', 'difficult', 'noisy', 'smelly', 'broken', 'messy', 'worst', 'hot',
+            'terrible', 'sad', 'poor', 'disgusting', 'rude', 'useless', 'chaos', 'corrupt', 
+            'unpleasant', 'chaotic', 'awful', 'horrible', 'scam', 'unfriendly', 'unorganized', 
+            'stinky', 'trash'
         }
         
         def clean_text(text):
@@ -412,78 +407,94 @@ with tab3:
         
         if st.button("Analisis Ulasan", type="primary"):
             if user_input:
-                teks_bersih = clean_text(user_input)
-                if teks_bersih:
-                    # Prediksi menggunakan IndoBERT Pipeline
-                    with st.spinner('Menganalisis teks menggunakan IndoBERT...'):
-                        hasil_prediksi = model.nlp(user_input[:512])[0]
-                        raw_label = hasil_prediksi['label']
-                        skor = hasil_prediksi['score']
-                    
-                    label_mapping_ai = {
-                        "LABEL_0": "POSITIF", 
-                        "LABEL_1": "NETRAL", 
-                        "LABEL_2": "NEGATIF"
-                    }
-                    prediksi = label_mapping_ai.get(raw_label, raw_label)
-                    
-                    if prediksi == "POSITIVE": prediksi = "POSITIF"
-                    if prediksi == "NEGATIVE": prediksi = "NEGATIF"
-                    if prediksi == "NEUTRAL": prediksi = "NETRAL"
-                    
-                    result_col1, result_col2 = st.columns(2)
-                    warna = "green" if prediksi == "POSITIF" else "red" if prediksi == "NEGATIF" else "gray"
-                    
-                    with result_col1:
-                        st.markdown(f"<div style='border: 1px solid lightgray; padding: 10px; border-radius: 5px;'>Hasil Prediksi AI:<br><b style='color:{warna}; font-size: 24px;'>{prediksi.upper()}</b></div>", unsafe_allow_html=True)
-                    
-                    with result_col2:
-                        st.write("**Tingkat Keyakinan (Probabilitas):**")
+                
+                with st.spinner('Menerjemahkan dan menganalisis ulasan...'):
+                    try:
+                        teks_terjemahan = GoogleTranslator(source='auto', target='id').translate(user_input)
+                    except:
+                        teks_terjemahan = user_input 
                         
-                        if prediksi == "POSITIF":
-                            prob_positive = skor
-                            prob_negative = 1.0 - skor
-                        elif prediksi == "NEGATIF":
-                            prob_positive = 1.0 - skor
-                            prob_negative = skor
-                        else: # Jika Netral
-                            prob_positive = (1.0 - skor) / 2
-                            prob_negative = (1.0 - skor) / 2
+                    teks_bersih_ai = str(teks_terjemahan).lower()
+                    teks_bersih_ai = re.sub(r'[^a-z\s]', '', teks_bersih_ai).strip()
+                    
+                    teks_bersih_kamus = str(user_input).lower()
+                    teks_bersih_kamus = re.sub(r'[^a-z\s]', '', teks_bersih_kamus).strip()
+                    
+                    hasil_prediksi = model.nlp(teks_bersih_ai[:512])[0]
+                    raw_label = hasil_prediksi['label']
+                    skor = hasil_prediksi['score']
+                
+                label_mapping_ai = {
+                    "LABEL_0": "POSITIF", 
+                    "LABEL_1": "NETRAL", 
+                    "LABEL_2": "NEGATIF"
+                }
+                prediksi = label_mapping_ai.get(raw_label, raw_label)
+                
+                if prediksi == "POSITIVE": prediksi = "POSITIF"
+                if prediksi == "NEGATIVE": prediksi = "NEGATIF"
+                if prediksi == "NEUTRAL": prediksi = "NETRAL"
+                
+                result_col1, result_col2 = st.columns(2)
+                warna = "green" if prediksi == "POSITIF" else "red" if prediksi == "NEGATIF" else "gray"
+                
+                with result_col1:
+                    st.markdown(f"<div style='border: 1px solid lightgray; padding: 10px; border-radius: 5px;'>Hasil Prediksi AI:<br><b style='color:{warna}; font-size: 24px;'>{prediksi.upper()}</b></div>", unsafe_allow_html=True)
+                
+                with result_col2:
+                    st.write("**Tingkat Keyakinan (Probabilitas):**")
+                    
+                    if prediksi == "POSITIF":
+                        prob_pos = skor
+                        prob_neu = (1.0 - skor) / 2
+                        prob_neg = (1.0 - skor) / 2
+                    elif prediksi == "NEGATIF":
+                        prob_neg = skor
+                        prob_neu = (1.0 - skor) / 2
+                        prob_pos = (1.0 - skor) / 2
+                    else: 
+                        prob_neu = skor
+                        prob_pos = (1.0 - skor) / 2
+                        prob_neg = (1.0 - skor) / 2
+                    
+                    st.progress(float(prob_pos), text=f"Positif: {prob_pos:.1%}")
+                    st.progress(float(prob_neu), text=f"Netral: {prob_neu:.1%}") 
+                    st.progress(float(prob_neg), text=f"Negatif: {prob_neg:.1%}")
+                    
+                st.markdown("---")
+                st.markdown("#### 🔍 Analisis Kata Kunci dalam Ulasan")
+                
+                kata_dalam_teks = set(teks_bersih_kamus.split())
+                kata_positif_ditemukan = kata_dalam_teks.intersection(kamus_positif)
+                kata_negatif_ditemukan = kata_dalam_teks.intersection(kamus_negatif)
+                
+                jml_pos = len(kata_positif_ditemukan)
+                jml_neg = len(kata_negatif_ditemukan)
+                
+                col_word1, col_word2 = st.columns(2)
+                
+                with col_word1:
+                    if kata_positif_ditemukan:
+                        kata_pos_str = ", ".join([f"`{k}`" for k in kata_positif_ditemukan])
+                        st.success(f"**Kata Positif Terdeteksi ({jml_pos}):**\n\n{kata_pos_str}")
+                    else:
+                        st.info("**Kata Positif Terdeteksi:**\n\n0 kata.")
                         
-                        st.progress(float(prob_positive), text=f"Positif: {prob_positive:.1%}")
-                        st.progress(float(prob_negative), text=f"Negatif: {prob_negative:.1%}")
+                with col_word2:
+                    if kata_negatif_ditemukan:
+                        kata_neg_str = ", ".join([f"`{k}`" for k in kata_negatif_ditemukan])
+                        st.error(f"**Kata Negatif Terdeteksi ({jml_neg}):**\n\n{kata_neg_str}")
+                    else:
+                        st.info("**Kata Negatif Terdeteksi:**\n\n0 kata.")
                         
-                    st.markdown("---")
-                    st.markdown("#### 🔍 Analisis Kata Kunci dalam Ulasan")
+                if prediksi == "POSITIF" and (jml_neg > jml_pos):
+                    st.warning("💡 **Catatan Analisis:** Model menyimpulkan ulasan ini **Positif**, meskipun terdapat lebih banyak kata bernada negatif. Hal ini terjadi karena model IndoBERT memahami konteks kalimat utuh (misal: kata penyangkalan 'tidak buruk').")
                     
-                    kata_dalam_teks = set(teks_bersih.split())
-                    kata_positif_ditemukan = kata_dalam_teks.intersection(kamus_positif)
-                    kata_negatif_ditemukan = kata_dalam_teks.intersection(kamus_negatif)
-                    
-                    jml_pos = len(kata_positif_ditemukan)
-                    jml_neg = len(kata_negatif_ditemukan)
-                    
-                    col_word1, col_word2 = st.columns(2)
-                    
-                    with col_word1:
-                        if kata_positif_ditemukan:
-                            kata_pos_str = ", ".join([f"`{k}`" for k in kata_positif_ditemukan])
-                            st.success(f"**Kata Positif Terdeteksi ({jml_pos}):**\n\n{kata_pos_str}")
-                        else:
-                            st.info("**Kata Positif Terdeteksi:**\n\n0 kata.")
-                            
-                    with col_word2:
-                        if kata_negatif_ditemukan:
-                            kata_neg_str = ", ".join([f"`{k}`" for k in kata_negatif_ditemukan])
-                            st.error(f"**Kata Negatif Terdeteksi ({jml_neg}):**\n\n{kata_neg_str}")
-                        else:
-                            st.info("**Kata Negatif Terdeteksi:**\n\n0 kata.")
-                            
-                    if prediksi == "POSITIF" and (jml_neg > jml_pos):
-                        st.warning("💡 **Catatan Analisis:** Model menyimpulkan ulasan ini **Positif**, meskipun terdapat lebih banyak kata bernada negatif. Hal ini terjadi karena model IndoBERT memahami konteks kalimat utuh (misal: kata penyangkalan 'tidak buruk').")
-                        
-                    elif prediksi == "NEGATIF" and (jml_pos > jml_neg):
-                        st.warning("💡 **Catatan Analisis:** Model menyimpulkan ulasan ini **Negatif**, meskipun terdapat lebih banyak kata bernada positif. Harap perhatikan konteks kalimat (misal: sarkasme).")
+                elif prediksi == "NEGATIF" and (jml_pos > jml_neg):
+                    st.warning("💡 **Catatan Analisis:** Model menyimpulkan ulasan ini **Negatif**, meskipun terdapat lebih banyak kata bernada positif. Harap perhatikan konteks kalimat (misal: sarkasme).")
+                
+                if user_input != teks_terjemahan:
+                    st.markdown(f"<small style='color:gray;'>*Sistem mendeteksi bahasa asing. Kalimat diterjemahkan menjadi: '{teks_terjemahan}' sebelum diprediksi oleh AI.*</small>", unsafe_allow_html=True)
 
 # ==========================================
 # 8. FOOTER: INSIGHTS & DATA MENTAH
