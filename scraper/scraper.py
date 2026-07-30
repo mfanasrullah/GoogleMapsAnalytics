@@ -17,24 +17,19 @@ class GoogleMapsScraper:
     def __init__(self):
         options = webdriver.ChromeOptions()
         # options.add_argument('--headless=false') 
-        # SANGAT PENTING: Memaksa ukuran layar jadi Full HD agar tab Ulasan tidak tersembunyi
         options.add_argument('--window-size=1920,1080')
         options.add_argument('--lang=id')
         options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36')
 
-        # ==============================================================
-        # PARAMETER ANTI-CRASH & STABILISASI (Tanpa Profil Pribadi)
-        # ==============================================================
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
         options.add_argument('--disable-gpu') # Meringankan beban kartu grafis
         
-        # OPSI DI BAWAH INI DIMATIKAN AGAR TIDAK CRASH / NOT REACHABLE
         # options.add_argument('--remote-debugging-port=9222')
         # user_data_path = r"C:\Users\user\AppData\Local\Google\Chrome\User Data"
         # options.add_argument(f"--user-data-dir={user_data_path}")
         # options.add_argument("--profile-directory=Profile 1") 
-        # ==============================================================
+
         
         self.driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
@@ -64,7 +59,7 @@ class GoogleMapsScraper:
             print(f"[ERROR] Tab ulasan '{location_name}' tetap tidak ditemukan atau terblokir Captcha.")
             return []
 
-        # 2. Logic Scroll (Diperlambat sedikit menjadi 3 detik agar lebih stabil saat ambil data banyak)
+        # 2. Logic Scroll 
         print(f"Menggulir ulasan {location_name} (Max: {max_scrolls} kali)...")
         for i in range(max_scrolls):
             try:
@@ -84,9 +79,6 @@ class GoogleMapsScraper:
         except:
             pass
 
-        # ==============================================================
-        # 4. PARSE DATA MENGGUNAKAN BEAUTIFULSOUP (UPGRADED)
-        # ==============================================================
         soup = BeautifulSoup(self.driver.page_source, 'html.parser')
         reviews = soup.find_all('div', class_='jftiEf')
         
@@ -102,9 +94,7 @@ class GoogleMapsScraper:
                 rating = rating_elem.get('aria-label') if rating_elem else ""
                 time_elem = r.select_one('.rsqaWe')
                 time_posted = time_elem.text if time_elem else ""
-                
-                # ---------------- FITUR BARU ----------------
-                
+                                
                 # 4c. Nama Reviewer
                 name_elem = r.select_one('.d4r55')
                 reviewer_name = name_elem.text.strip() if name_elem else "Anonim"
@@ -116,7 +106,6 @@ class GoogleMapsScraper:
                 is_local_guide = True if "Local Guide" in contrib_text else False
                 
                 # 4e. Jumlah Like (Suka)
-                # Mencari angka di dalam tombol jempol
                 like_elem = r.select_one('.kX08se, .pkWtMe')
                 likes = like_elem.text.strip() if like_elem and like_elem.text.strip().isdigit() else "0"
                 
@@ -125,13 +114,10 @@ class GoogleMapsScraper:
                 owner_response = owner_elem.text.strip() if owner_elem else ""
                 
                 # 4g. Apakah melampirkan Foto? (Boolean True/False)
-                # Class .Tya61d adalah kontainer foto thumbnail di ulasan Maps
                 photo_elems = r.select('.Tya61d')
                 has_photo = True if len(photo_elems) > 0 else False
                 
-                # --------------------------------------------
 
-                # Simpan data hanya jika ada teks ulasannya
                 if text.strip():
                     data.append({
                         'location': location_name, 
@@ -146,10 +132,8 @@ class GoogleMapsScraper:
                         'owner_response': owner_response
                     })
             except Exception as e:
-                # Jika 1 ulasan gagal, lewati ke ulasan berikutnya agar script tidak mati
                 continue
                 
-        # Menghapus data duplikat (mengubah list of dict jadi kumpulan tuple unik, lalu dikembalikan ke dict)
         data = [dict(t) for t in {tuple(d.items()) for d in data}]
         
         print(f"✅ Berhasil mengambil {len(data)} ulasan (FULL METADATA) dari {location_name}.")
@@ -161,7 +145,6 @@ class GoogleMapsScraper:
         
         for loc_name, url in TARGET_LOCATIONS.items():
             print(f"\nMulai proses: {loc_name}...")
-            # Setel max_scrolls ke angka besar jika ingin data banyak
             data = self.scrape_location(loc_name, url, max_scrolls=100) 
             all_data.extend(data)
             
