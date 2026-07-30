@@ -2,18 +2,15 @@ import pandas as pd
 from aspect.aspect import AspectExtractor
 from aspect.summary import AspectSummarizer
 
-# Asumsi df_reviews adalah data ulasan yang sudah memiliki kolom 'clean_text' dan 'sentiment'
 df_reviews = pd.DataFrame({
     'location': ['Batam Centre Ferry Terminal', 'Harbour Bay Ferry Terminal'],
     'clean_text': ['tiket mahal dan antrean imigrasi lama', 'parkiran luas dan ruang tunggu nyaman'],
     'sentiment': ['NEGATIVE', 'POSITIVE']
 })
 
-# 1. Ekstraksi (Pilih salah satu metode)
 extractor = AspectExtractor(method='rule-based') # Ubah ke 'zero-shot' jika ingin akurasi semantik
 df_with_aspects = extractor.process_dataframe(df_reviews, text_column='clean_text')
 
-# 2. Ringkasan untuk Dashboard
 summarizer = AspectSummarizer()
 df_summary = summarizer.get_aspect_sentiment_summary(df_with_aspects)
 df_pain_points = summarizer.get_top_pain_points(df_with_aspects)
