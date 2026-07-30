@@ -1,6 +1,3 @@
-# aspect/keyword.py
-
-# Kamus pemetaan aspek untuk pelabuhan feri di Batam
 ASPECT_DICT = {
     "Fasilitas & Kebersihan": [
         "toilet", "wc", "bersih", "kotor", "ac", "panas", "kursi", 
