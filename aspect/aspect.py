@@ -1,4 +1,3 @@
-# aspect/aspect.py
 import pandas as pd
 from .keyword import ASPECT_DICT
 
