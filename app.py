@@ -371,9 +371,6 @@ with tab3:
     if model is None:
         st.error("Model Machine Learning belum tersedia. Fitur prediksi dinonaktifkan.")
     else:
-        # ==============================================================
-        # PERBAIKAN: KAMUS DITAMBAH HASIL ANALISIS DARI CSV
-        # ==============================================================
         kamus_positif = {
             'bagus', 'baik', 'cepat', 'bersih', 'ramah', 'nyaman', 'keren', 'mantap', 
             'memuaskan', 'mudah', 'rapi', 'aman', 'lancar', 'terbaik', 'puas', 'indah', 
@@ -507,8 +504,12 @@ if 'sentiment' in df_working.columns:
         st.info(f"**{i}.** {insight}")
 
 with st.expander("Lihat Data Ulasan Mentah (Tabel)"):
-    cols_to_show = ['pelabuhan', 'tanggal', 'review_text', 'sentiment', 'review_rating']
+    # PERBAIKAN: Kolom 'sentiment' DIHAPUS dari tampilan tabel website, 
+    # TAPI TETAP ADA di sistem (df_working) agar fungsi lain tidak error.
+    cols_to_show = ['pelabuhan', 'tanggal', 'review_text', 'review_rating']
     available_cols = [c for c in cols_to_show if c in df_working.columns]
+    
     if 'aspects' in df_working.columns:
         available_cols.append('aspects')
+        
     st.dataframe(df_working[available_cols])
