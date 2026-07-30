@@ -1,4 +1,3 @@
-# recommendation/insight.py
 import pandas as pd
 
 def generate_insights(df_processed):
