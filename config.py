@@ -5,8 +5,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_RAW = os.path.join(BASE_DIR, 'data', 'raw')
 DATA_PROCESSED = os.path.join(BASE_DIR, 'data', 'processed')
 
-# Menggunakan Dictionary untuk menyimpan Direct URL
-# Parameter hl=en diubah menjadi hl=id agar UI Google Maps konsisten berbahasa Indonesia
+
 TARGET_LOCATIONS = {
     "Pemanasan Browser": "https://www.google.com/maps/place/Politeknik+Negeri+Batam",
     # --- BATAM CENTRE DIPECAH JADI 2 LINK ---
