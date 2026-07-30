@@ -16,24 +16,24 @@ from config import TARGET_LOCATIONS, DATA_RAW
 class GoogleMapsScraper:
     def __init__(self):
         options = webdriver.ChromeOptions()
-       # options.add_argument('--headless=false') 
+        # options.add_argument('--headless=false') 
         # SANGAT PENTING: Memaksa ukuran layar jadi Full HD agar tab Ulasan tidak tersembunyi
         options.add_argument('--window-size=1920,1080')
         options.add_argument('--lang=id')
         options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36')
 
-# ==============================================================
-        # TAMBAHAN BARU: LOAD PROFIL CHROME AGAR OTOMATIS LOGIN
         # ==============================================================
-        # Sesuaikan path ini dengan lokasi User Data di laptop/PC Anda.
-        # Gunakan raw string (huruf 'r' di depan kutip) agar backslash terbaca dengan benar di Windows.
-        user_data_path = r"C:\Users\user\AppData\Local\Google\Chrome\User Data"
+        # PARAMETER ANTI-CRASH & STABILISASI (Tanpa Profil Pribadi)
+        # ==============================================================
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
+        options.add_argument('--disable-gpu') # Meringankan beban kartu grafis
         
-        options.add_argument(f"--user-data-dir={user_data_path}")
-        
-        # Jika Anda menggunakan profil utama, biasanya bernama "Default". 
-        # Jika profil lain, namanya bisa "Profile 1", "Profile 2", dst.
-        options.add_argument("--profile-directory=Profile 1") 
+        # OPSI DI BAWAH INI DIMATIKAN AGAR TIDAK CRASH / NOT REACHABLE
+        # options.add_argument('--remote-debugging-port=9222')
+        # user_data_path = r"C:\Users\user\AppData\Local\Google\Chrome\User Data"
+        # options.add_argument(f"--user-data-dir={user_data_path}")
+        # options.add_argument("--profile-directory=Profile 1") 
         # ==============================================================
         
         self.driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
