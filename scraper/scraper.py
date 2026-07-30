@@ -40,7 +40,6 @@ class GoogleMapsScraper:
         self.driver.get(url)
         wait = WebDriverWait(self.driver, 30)
 
-        # 1. Tunggu dan klik tab "Ulasan"
         try:
             xpath_ulasan = """
             //button[
@@ -59,7 +58,6 @@ class GoogleMapsScraper:
             print(f"[ERROR] Tab ulasan '{location_name}' tetap tidak ditemukan atau terblokir Captcha.")
             return []
 
-        # 2. Logic Scroll 
         print(f"Menggulir ulasan {location_name} (Max: {max_scrolls} kali)...")
         for i in range(max_scrolls):
             try:
@@ -70,7 +68,6 @@ class GoogleMapsScraper:
             except:
                 break
                 
-        # 3. Klik semua tombol "Lainnya" / "Selengkapnya"
         try:
             more_buttons = self.driver.find_elements(By.XPATH, "//button[contains(@aria-label, 'selengkapnya') or contains(text(), 'Lainnya') or contains(text(), 'More')]")
             for btn in more_buttons:
@@ -85,35 +82,28 @@ class GoogleMapsScraper:
         data = []
         for r in reviews:
             try:
-                # 4a. Teks Ulasan (Yang sudah ada)
                 text_elem = r.select_one('.wiI7pd, .MyEned')
                 text = text_elem.text if text_elem else ""
                 
-                # 4b. Rating & Waktu (Yang sudah ada)
                 rating_elem = r.select_one('.kvMYJc')
                 rating = rating_elem.get('aria-label') if rating_elem else ""
                 time_elem = r.select_one('.rsqaWe')
                 time_posted = time_elem.text if time_elem else ""
                                 
-                # 4c. Nama Reviewer
                 name_elem = r.select_one('.d4r55')
                 reviewer_name = name_elem.text.strip() if name_elem else "Anonim"
                 
-                # 4d. Status Local Guide & Jumlah Kontribusi
                 contrib_elem = r.select_one('.RfnDt')
                 contrib_text = contrib_elem.text.strip() if contrib_elem else ""
                 # Deteksi boolean True/False untuk Local Guide
                 is_local_guide = True if "Local Guide" in contrib_text else False
                 
-                # 4e. Jumlah Like (Suka)
                 like_elem = r.select_one('.kX08se, .pkWtMe')
                 likes = like_elem.text.strip() if like_elem and like_elem.text.strip().isdigit() else "0"
                 
-                # 4f. Respon dari Pemilik (Owner Response)
                 owner_elem = r.select_one('.CDe7Nb')
                 owner_response = owner_elem.text.strip() if owner_elem else ""
                 
-                # 4g. Apakah melampirkan Foto? (Boolean True/False)
                 photo_elems = r.select('.Tya61d')
                 has_photo = True if len(photo_elems) > 0 else False
                 
