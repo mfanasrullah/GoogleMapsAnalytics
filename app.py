@@ -1,4 +1,3 @@
-# app.py
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -18,15 +17,12 @@ from aspect.summary import AspectSummarizer
 from sentiment.indobert import SentimentAnalyzer
 
 
-# KONFIGURASI TEMA & PALETTE WARNA CORPORATE
 sns.set_theme(style="whitegrid")
 sns.set_palette("Blues_d")
 
 
-# KONFIGURASI HALAMAN
 st.set_page_config(page_title="Dashboard Analisis Pelabuhan", layout="wide")
 
-# Menyembunyikan header, menu, dan footer default Streamlit
 hide_streamlit_style = """
             <style>
             #MainMenu {visibility: hidden;}
@@ -51,7 +47,6 @@ def load_logo():
 logo_polibatam = load_logo()
 
 
-# FUNGSI PARSING WAKTU DUA BAHASA (ID & EN)
 def parse_gmaps_time(time_str):
     if pd.isna(time_str) or str(time_str).strip() == "": 
         return datetime.now()
@@ -81,7 +76,6 @@ def parse_gmaps_time(time_str):
     return now
 
 
-#  FUNGSI UNTUK MEMUAT DATA & MODEL
 @st.cache_data(ttl="1d") 
 def load_data():
     file_path = os.path.join(DATA_PROCESSED, "final_dataset.csv")
@@ -117,7 +111,6 @@ if df_full is None or df_full.empty:
     st.stop()
 
 
-# SIDEBAR (FILTERS & BRANDING)
 with st.sidebar:
     if logo_polibatam:
         if isinstance(logo_polibatam, PILImage.Image):
@@ -161,7 +154,6 @@ with st.sidebar:
     st.markdown("<small>Dikembangkan oleh Tim Analitik Polibatam</small>", unsafe_allow_html=True)
 
 
-# MEMPROSES DATA BERDASARKAN FILTER
 df_working = df_full[df_full['pelabuhan'].isin(selected_ports)]
 
 if start_date <= end_date:
@@ -172,7 +164,6 @@ if start_date <= end_date:
 else:
     df_working = pd.DataFrame(columns=df_full.columns) 
 
-# BODY - HEADER SECTION (TITLE)
 st.title("Dashboard Analisis Sentimen Pelabuhan")
 st.markdown("<p style='font-size: 18px; color: gray; margin-top:-15px;'>powered by Tim Analitik Polibatam</p>", unsafe_allow_html=True)
 st.markdown("---")
@@ -181,7 +172,6 @@ if df_working.empty:
     st.warning("⚠️ Tidak ada data pelabuhan yang dipilih atau sesuai rentang waktu. Sesuaikan filter di sidebar.")
     st.stop()
 
-# BODY - KPI ROW (RINGKASAN METRIK UTAMA)
 kpi_col1, kpi_col2, kpi_col3 = st.columns(3)
 
 total_reviews = len(df_working)
@@ -197,7 +187,6 @@ with kpi_col3:
 
 st.markdown("---")
 
-# BODY - PEMBUATAN TABS
 tab1, tab2, tab3 = st.tabs([
     "📊 Visualisasi Data & Tren", 
     "☁️ WordCloud & Heatmap Keluhan", 
@@ -238,7 +227,6 @@ with tab1:
 
     st.markdown("---")
     
-    # Tren Waktu
     st.markdown("#### Tren Volume Ulasan per Bulan di Setiap Pelabuhan")
     if 'bulan_tahun' in df_working.columns:
         trend_df = df_working.groupby(['bulan_tahun', 'pelabuhan']).size().reset_index(name='Jumlah')
@@ -480,7 +468,6 @@ with tab3:
                 if user_input != teks_terjemahan:
                     st.markdown(f"<small style='color:gray;'>*Sistem mendeteksi bahasa asing. Kalimat diterjemahkan menjadi: '{teks_terjemahan}' sebelum diprediksi oleh AI.*</small>", unsafe_allow_html=True)
 
-# FOOTER: INSIGHTS & DATA MENTAH
 st.markdown("---")
 st.subheader("💡 Insights & Rekomendasi Manajerial")
 if 'sentiment' in df_working.columns:
@@ -489,8 +476,6 @@ if 'sentiment' in df_working.columns:
         st.info(f"**{i}.** {insight}")
 
 with st.expander("Lihat Data Ulasan Mentah (Tabel)"):
-    # PERBAIKAN: Kolom 'sentiment' DIHAPUS dari tampilan tabel website, 
-    # TAPI TETAP ADA di sistem (df_working) agar fungsi lain tidak error.
     cols_to_show = ['pelabuhan', 'tanggal', 'review_text', 'review_rating']
     available_cols = [c for c in cols_to_show if c in df_working.columns]
     
