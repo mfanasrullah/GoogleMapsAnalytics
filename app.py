@@ -281,7 +281,7 @@ with tab1:
         }
         df_aspect_summary['sentiment'] = df_aspect_summary['sentiment'].replace(label_mapping)
 
-        urutan_sentimen = ["POSITIF", "NETRAL", "NEGATIF"]
+        urutan_sentimen = ["NEGATIF", "NETRAL", "POSITIF"]
         
         fig_aspect = px.bar(
             df_aspect_summary, 
