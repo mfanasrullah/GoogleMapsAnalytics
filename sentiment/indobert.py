@@ -1,4 +1,3 @@
-# sentiment/indobert.py
 from transformers import pipeline
 import pandas as pd
 import torch
