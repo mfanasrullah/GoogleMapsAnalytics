@@ -11,22 +11,19 @@ from datetime import datetime, timedelta
 import plotly.express as px
 from deep_translator import GoogleTranslator
 
-# Import Modul Analitik kita
 from config import DATA_PROCESSED
 from recommendation.insight import generate_insights
 from aspect.aspect import AspectExtractor
 from aspect.summary import AspectSummarizer
 from sentiment.indobert import SentimentAnalyzer
 
-# ==========================================
-# 0. KONFIGURASI TEMA & PALETTE WARNA CORPORATE
-# ==========================================
+
+# KONFIGURASI TEMA & PALETTE WARNA CORPORATE
 sns.set_theme(style="whitegrid")
 sns.set_palette("Blues_d")
 
-# ==========================================
-# 1. KONFIGURASI HALAMAN
-# ==========================================
+
+# KONFIGURASI HALAMAN
 st.set_page_config(page_title="Dashboard Analisis Pelabuhan", layout="wide")
 
 # Menyembunyikan header, menu, dan footer default Streamlit
@@ -53,9 +50,8 @@ def load_logo():
 
 logo_polibatam = load_logo()
 
-# ==========================================
+
 # FUNGSI PARSING WAKTU DUA BAHASA (ID & EN)
-# ==========================================
 def parse_gmaps_time(time_str):
     if pd.isna(time_str) or str(time_str).strip() == "": 
         return datetime.now()
@@ -84,9 +80,8 @@ def parse_gmaps_time(time_str):
     
     return now
 
-# ==========================================
-# 2. FUNGSI UNTUK MEMUAT DATA & MODEL
-# ==========================================
+
+#  FUNGSI UNTUK MEMUAT DATA & MODEL
 @st.cache_data(ttl="1d") 
 def load_data():
     file_path = os.path.join(DATA_PROCESSED, "final_dataset.csv")
@@ -121,9 +116,8 @@ if df_full is None or df_full.empty:
     st.error("Data ulasan belum tersedia. Silakan jalankan `python main.py` terlebih dahulu untuk melakukan scraping.")
     st.stop()
 
-# ==========================================
-# 3. SIDEBAR (FILTERS & BRANDING)
-# ==========================================
+
+# SIDEBAR (FILTERS & BRANDING)
 with st.sidebar:
     if logo_polibatam:
         if isinstance(logo_polibatam, PILImage.Image):
@@ -166,9 +160,8 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("<small>Dikembangkan oleh Tim Analitik Polibatam</small>", unsafe_allow_html=True)
 
-# ==========================================
-# 4. MEMPROSES DATA BERDASARKAN FILTER
-# ==========================================
+
+# MEMPROSES DATA BERDASARKAN FILTER
 df_working = df_full[df_full['pelabuhan'].isin(selected_ports)]
 
 if start_date <= end_date:
@@ -179,9 +172,7 @@ if start_date <= end_date:
 else:
     df_working = pd.DataFrame(columns=df_full.columns) 
 
-# ==========================================
-# 5. BODY - HEADER SECTION (TITLE)
-# ==========================================
+# BODY - HEADER SECTION (TITLE)
 st.title("Dashboard Analisis Sentimen Pelabuhan")
 st.markdown("<p style='font-size: 18px; color: gray; margin-top:-15px;'>powered by Tim Analitik Polibatam</p>", unsafe_allow_html=True)
 st.markdown("---")
@@ -190,9 +181,7 @@ if df_working.empty:
     st.warning("⚠️ Tidak ada data pelabuhan yang dipilih atau sesuai rentang waktu. Sesuaikan filter di sidebar.")
     st.stop()
 
-# ==========================================
-# 6. BODY - KPI ROW (RINGKASAN METRIK UTAMA)
-# ==========================================
+# BODY - KPI ROW (RINGKASAN METRIK UTAMA)
 kpi_col1, kpi_col2, kpi_col3 = st.columns(3)
 
 total_reviews = len(df_working)
@@ -208,9 +197,7 @@ with kpi_col3:
 
 st.markdown("---")
 
-# ==========================================
-# 7. BODY - PEMBUATAN TABS
-# ==========================================
+# BODY - PEMBUATAN TABS
 tab1, tab2, tab3 = st.tabs([
     "📊 Visualisasi Data & Tren", 
     "☁️ WordCloud & Heatmap Keluhan", 
@@ -493,9 +480,7 @@ with tab3:
                 if user_input != teks_terjemahan:
                     st.markdown(f"<small style='color:gray;'>*Sistem mendeteksi bahasa asing. Kalimat diterjemahkan menjadi: '{teks_terjemahan}' sebelum diprediksi oleh AI.*</small>", unsafe_allow_html=True)
 
-# ==========================================
-# 8. FOOTER: INSIGHTS & DATA MENTAH
-# ==========================================
+# FOOTER: INSIGHTS & DATA MENTAH
 st.markdown("---")
 st.subheader("💡 Insights & Rekomendasi Manajerial")
 if 'sentiment' in df_working.columns:
