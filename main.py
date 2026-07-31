@@ -1,36 +1,105 @@
+
 import pandas as pd
 import os
-from config import DATA_PROCESSED
+import sys
+
+
+from config import DATA_RAW, DATA_PROCESSED
+
 
 from scraper.scraper import GoogleMapsScraper
 from preprocessing.preprocessing import TextPreprocessor
 from sentiment.indobert import SentimentAnalyzer
+from aspect.aspect import AspectExtractor
+
+
+try:
+    from sentiment.evaluation import SentimentEvaluator
+except ImportError:
+    SentimentEvaluator = None
 
 def run_pipeline():
-    print("=== MULAI PIPELINE DATA ANALYTICS ===")
+    print("="*50)
+    print("🛳️  PIPELINE DATA ANALYTICS PELABUHAN BATAM 🛳️")
+    print("="*50)
+    print("Pilih mode eksekusi:")
+    print("1. Mulai dari Awal (Scraping Data Baru -> Preprocessing -> Analisis)")
+    print("2. Gunakan Data Mentah (Skip Scraping -> Preprocessing -> Analisis)")
+    print("="*50)
     
-    print("\n[1/3] Menjalankan Scraper Google Maps...")
-    scraper = GoogleMapsScraper()
-    df_raw = scraper.run_all() 
+    pilihan = input("Masukkan pilihan Anda (1 atau 2): ").strip()
     
-    if df_raw.empty:
-        print("Data kosong! Pastikan koneksi internet stabil dan elemen Google Maps tidak berubah.")
-        return
+
+    df = pd.DataFrame()
+
+
+    if pilihan == '1':
+        print("\n[1/5] Menjalankan Scraper Google Maps...")
+        scraper = GoogleMapsScraper()
+        df = scraper.run_all()
         
-    print("\n[2/3] Membersihkan dan Menerjemahkan Teks...")
+        if df is None or df.empty:
+            print("❌ Scraping gagal atau tidak ada data yang diambil. Program dihentikan.")
+            return
+            
+    elif pilihan == '2':
+        print("\n[1/5] Membaca data mentah (raw_reviews.csv) yang sudah ada...")
+        raw_path = os.path.join(DATA_RAW, 'raw_reviews.csv')
+        
+        if not os.path.exists(raw_path):
+            print(f"❌ File mentah tidak ditemukan di: {raw_path}")
+            print("Silakan jalankan ulang program dan pilih Mode 1 (Scraping) terlebih dahulu.")
+            return
+            
+        df = pd.read_csv(raw_path)
+        print(f"✅ Berhasil memuat {len(df)} baris data mentah.")
+        
+    else:
+        print("❌ Pilihan tidak valid. Harap masukkan angka 1 atau 2. Program dihentikan.")
+        return
+
+
+    print("\n[2/5] Memulai Preprocessing Teks (NLP)...")
     preprocessor = TextPreprocessor()
-    df_clean = preprocessor.process_pipeline(df_raw, text_col='text')
-    
-    print("\n[3/3] Menganalisis Sentimen dengan AI...")
-    analyzer = SentimentAnalyzer()
-    df_final = analyzer.process_dataframe(df_clean, text_column='final_text')
-    
+
+    df = preprocessor.process_pipeline(df, text_col='text')
+
+
+    print("\n[3/5] Memulai Prediksi Sentimen AI (IndoBERT)...")
+    try:
+        sentiment_analyzer = SentimentAnalyzer()
+
+        df = sentiment_analyzer.process_dataframe(df, text_column='text') 
+        print("✅ Analisis Sentimen Selesai.")
+    except Exception as e:
+        print(f"⚠️ Peringatan: Gagal memproses sentimen. Error: {e}")
+
+
+    print("\n[4/5] Memulai Ekstraksi Aspek Keluhan/Pujian...")
+    try:
+        aspect_extractor = AspectExtractor(method='rule-based')
+
+        df = aspect_extractor.process_dataframe(df, text_column='final_text')
+        print("✅ Ekstraksi Aspek Selesai.")
+    except Exception as e:
+        print(f"⚠️ Peringatan: Gagal memproses aspek. Error: {e}")
+
+
     os.makedirs(DATA_PROCESSED, exist_ok=True)
-    output_path = os.path.join(DATA_PROCESSED, "final_dataset.csv")
-    df_final.to_csv(output_path, index=False)
-    
-    print(f"\n=== PIPELINE SELESAI! Data tersimpan di {output_path} ===")
-    print("Sekarang Anda bisa menjalankan: streamlit run app.py")
+    final_path = os.path.join(DATA_PROCESSED, 'final_dataset.csv')
+    df.to_csv(final_path, index=False)
+    print(f"\n🎉 PIPELINE SELESAI! Data final berhasil diperbarui dan disimpan di: {final_path}")
+
+
+    if SentimentEvaluator is not None:
+        print("\n[5/5] Mengukur Akurasi dan Evaluasi Model...")
+        try:
+            evaluator = SentimentEvaluator()
+            evaluator.run_evaluation()
+        except Exception as e:
+            print(f"⚠️ Evaluasi gagal dijalankan. Error: {e}")
+    else:
+        print("\n[5/5] Evaluasi dilewati (File sentiment/evaluation.py tidak ditemukan).")
 
 if __name__ == "__main__":
     run_pipeline()
