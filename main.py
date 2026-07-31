@@ -69,10 +69,10 @@ def run_pipeline():
     try:
         sentiment_analyzer = SentimentAnalyzer()
 
-        df = sentiment_analyzer.process_dataframe(df, text_column='text') 
+        df = sentiment_analyzer.process_dataframe(df, text_column='semi_clean_text') 
         print("✅ Analisis Sentimen Selesai.")
     except Exception as e:
-        print(f"⚠️ Peringatan: Gagal memproses sentimen. Error: {e}")
+        pass
 
 
     print("\n[4/5] Memulai Ekstraksi Aspek Keluhan/Pujian...")
