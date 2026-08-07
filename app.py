@@ -1,3 +1,4 @@
+# app.py
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -9,6 +10,7 @@ import PIL.Image as PILImage
 from datetime import datetime, timedelta
 import plotly.express as px
 from deep_translator import GoogleTranslator
+import math
 
 from config import DATA_PROCESSED
 from recommendation.insight import generate_insights
@@ -16,21 +18,41 @@ from aspect.aspect import AspectExtractor
 from aspect.summary import AspectSummarizer
 from sentiment.indobert import SentimentAnalyzer
 
-
+# ==========================================
+# 0. KONFIGURASI TEMA & PALETTE WARNA CORPORATE
+# ==========================================
 sns.set_theme(style="whitegrid")
 sns.set_palette("Blues_d")
 
+# ==========================================
+# 1. KONFIGURASI HALAMAN & CSS RESPONSIVE
+# ==========================================
+st.set_page_config(page_title="Dashboard Analisis Pelabuhan", layout="wide", initial_sidebar_state="auto")
 
-st.set_page_config(page_title="Dashboard Analisis Pelabuhan", layout="wide")
-
-hide_streamlit_style = """
-            <style>
-            #MainMenu {visibility: hidden;}
-            header {visibility: hidden;}
-            footer {visibility: hidden;}
-            </style>
-            """
-st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+# CSS Kustom untuk memaksimalkan ruang di layar HP (Mobile Friendly)
+responsive_css = """
+<style>
+    /* Mengurangi padding bawaan Streamlit agar layar HP lebih lega */
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    
+    /* Menyembunyikan menu bawaan */
+    #MainMenu {visibility: hidden;}
+    header {visibility: hidden;}
+    footer {visibility: hidden;}
+    
+    /* Memastikan teks KPI / Metrik tidak meluber di HP */
+    div[data-testid="metric-container"] > div > div {
+        font-size: 1.6rem !important;
+        word-wrap: break-word;
+    }
+</style>
+"""
+st.markdown(responsive_css, unsafe_allow_html=True)
 
 @st.cache_data(ttl="1d")
 def load_logo():
@@ -46,7 +68,9 @@ def load_logo():
 
 logo_polibatam = load_logo()
 
-
+# ==========================================
+# FUNGSI PARSING WAKTU DUA BAHASA (ID & EN)
+# ==========================================
 def parse_gmaps_time(time_str):
     if pd.isna(time_str) or str(time_str).strip() == "": 
         return datetime.now()
@@ -75,7 +99,9 @@ def parse_gmaps_time(time_str):
     
     return now
 
-
+# ==========================================
+# 2. FUNGSI UNTUK MEMUAT DATA & MODEL
+# ==========================================
 @st.cache_data(ttl="1d") 
 def load_data():
     file_path = os.path.join(DATA_PROCESSED, "final_dataset.csv")
@@ -110,20 +136,22 @@ if df_full is None or df_full.empty:
     st.error("Data ulasan belum tersedia. Silakan jalankan `python main.py` terlebih dahulu untuk melakukan scraping.")
     st.stop()
 
-
+# ==========================================
+# 3. SIDEBAR (FILTERS & BRANDING)
+# ==========================================
 with st.sidebar:
     if logo_polibatam:
         if isinstance(logo_polibatam, PILImage.Image):
             logo_resized = logo_polibatam.resize((150, int(150 * logo_polibatam.height / logo_polibatam.width)))
-            st.image(logo_resized)
+            st.image(logo_resized, use_container_width=True)
         else:
-            st.image(logo_polibatam, width=150)
+            st.image(logo_polibatam, use_container_width=True)
     else:
         st.write("**[POLIBATAM]**")
     
     st.markdown("## Pusat Data Pelabuhan")
     
-    if st.button("🔄 Segarkan Data Sekarang"):
+    if st.button("🔄 Segarkan Data Sekarang", use_container_width=True):
         st.cache_data.clear()
         st.rerun()
 
@@ -143,9 +171,9 @@ with st.sidebar:
     
     col_date1, col_date2 = st.columns(2)
     with col_date1:
-        start_date = st.date_input("📅 Tgl Mulai", value=min_date, min_value=min_date, max_value=max_date)
+        start_date = st.date_input("📅 Mulai", value=min_date, min_value=min_date, max_value=max_date)
     with col_date2:
-        end_date = st.date_input("📅 Tgl Akhir", value=max_date, min_value=min_date, max_value=max_date)
+        end_date = st.date_input("📅 Akhir", value=max_date, min_value=min_date, max_value=max_date)
         
     if start_date > end_date:
         st.error("⚠️ Tgl Mulai tidak boleh melewati Tgl Akhir!")
@@ -153,7 +181,9 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("<small>Dikembangkan oleh Tim Analitik Polibatam</small>", unsafe_allow_html=True)
 
-
+# ==========================================
+# 4. MEMPROSES DATA BERDASARKAN FILTER
+# ==========================================
 df_working = df_full[df_full['pelabuhan'].isin(selected_ports)]
 
 if start_date <= end_date:
@@ -165,13 +195,16 @@ else:
     df_working = pd.DataFrame(columns=df_full.columns) 
 
 st.title("Dashboard Analisis Sentimen Pelabuhan")
-st.markdown("<p style='font-size: 18px; color: gray; margin-top:-15px;'>powered by Tim Analitik Polibatam</p>", unsafe_allow_html=True)
+st.markdown("<p style='font-size: 16px; color: gray; margin-top:-15px;'>powered by Tim Analitik Polibatam</p>", unsafe_allow_html=True)
 st.markdown("---")
 
 if df_working.empty:
     st.warning("⚠️ Tidak ada data pelabuhan yang dipilih atau sesuai rentang waktu. Sesuaikan filter di sidebar.")
     st.stop()
 
+# ==========================================
+# 6. BODY - KPI ROW (RINGKASAN METRIK UTAMA)
+# ==========================================
 kpi_col1, kpi_col2, kpi_col3 = st.columns(3)
 
 total_reviews = len(df_working)
@@ -183,21 +216,25 @@ with kpi_col1:
 with kpi_col2:
     st.metric(label="Rata-rata Rating (Bintang)", value=f"{avg_rating:.1f} ⭐")
 with kpi_col3:
-    st.metric(label="Jumlah Pelabuhan Teranalisis", value=f"{ports_counted}")
+    st.metric(label="Pelabuhan Teranalisis", value=f"{ports_counted}")
 
 st.markdown("---")
 
+# ==========================================
+# 7. BODY - PEMBUATAN TABS
+# ==========================================
 tab1, tab2, tab3 = st.tabs([
-    "📊 Visualisasi Data & Tren", 
-    "☁️ WordCloud & Heatmap Keluhan", 
+    "📊 Visualisasi Data", 
+    "☁️ WordCloud & Heatmap", 
     "🤖 Prediksi Sentimen AI"
 ])
 
 with tab1:
+    # Streamlit otomatis akan menumpuk (stack) col1 dan col2 ini jika di HP
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown("#### Distribusi Popularitas (Volume Aktivitas)")
+        st.markdown("#### Distribusi Popularitas")
         pop_df = df_working['pelabuhan'].value_counts().reset_index()
         pop_df.columns = ['Pelabuhan', 'Jumlah Ulasan']
         
@@ -206,10 +243,11 @@ with tab1:
         ax_pop.set_xlabel("Total Ulasan (Volume)", fontsize=10)
         ax_pop.set_ylabel("", fontsize=10)
         sns.despine(left=True, bottom=True)
-        st.pyplot(fig_pop)
+        # Menambahkan use_container_width=True agar responsif
+        st.pyplot(fig_pop, use_container_width=True)
 
     with col2:
-        st.markdown("#### Kualitas (Rating) vs Kuantitas (Volume)")
+        st.markdown("#### Kualitas (Rating) vs Volume")
         if 'review_rating' in df_working.columns:
             scatter_df = df_working.groupby('pelabuhan').agg(
                 Rata_Rating=('review_rating', 'mean'),
@@ -223,11 +261,11 @@ with tab1:
             ax_scat.set_ylim(1, 5.5) 
             ax_scat.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=8, title='Pelabuhan')
             sns.despine(left=True, bottom=True)
-            st.pyplot(fig_scat)
+            st.pyplot(fig_scat, use_container_width=True)
 
     st.markdown("---")
     
-    st.markdown("#### Tren Volume Ulasan per Bulan di Setiap Pelabuhan")
+    st.markdown("#### Tren Volume Ulasan per Bulan")
     if 'bulan_tahun' in df_working.columns:
         trend_df = df_working.groupby(['bulan_tahun', 'pelabuhan']).size().reset_index(name='Jumlah')
         trend_df = trend_df.sort_values('bulan_tahun')
@@ -239,7 +277,7 @@ with tab1:
         ax_trend.set_ylabel("Volume Ulasan", fontsize=10)
         ax_trend.grid(True, linestyle='--', alpha=0.6)
         sns.despine(left=True, bottom=True)
-        st.pyplot(fig_trend)
+        st.pyplot(fig_trend, use_container_width=True)
         
     st.markdown("---")
     
@@ -258,14 +296,21 @@ with tab1:
 
         urutan_sentimen = ["NEGATIF", "NETRAL", "POSITIF"]
         
+        # PERBAIKAN RESPONSIVITAS: 
+        # Mengubah facet_col_wrap menjadi 2 agar tidak berdesakan di layar kecil
+        # Mengkalkulasi tinggi figure secara dinamis sesuai jumlah pelabuhan
+        jml_pelabuhan_unik = df_aspect_summary['pelabuhan'].nunique()
+        baris_dibutuhkan = math.ceil(jml_pelabuhan_unik / 2) 
+        dynamic_height = max(500, baris_dibutuhkan * 400)
+        
         fig_aspect = px.bar(
             df_aspect_summary, 
             x='aspects', 
             y='count', 
             color='sentiment', 
             facet_col='pelabuhan', 
-            facet_col_wrap=3,
-            facet_row_spacing=0.4,   
+            facet_col_wrap=2, # Diubah dari 3 menjadi 2
+            facet_row_spacing=0.15,   
             facet_col_spacing=0.08, 
             category_orders={"sentiment": urutan_sentimen}, 
             color_discrete_map={
@@ -277,15 +322,15 @@ with tab1:
         )
         
         fig_aspect.update_layout(
-            height=900,              
+            height=dynamic_height, # Tinggi dinamis             
             plot_bgcolor='rgba(0,0,0,0)', 
             paper_bgcolor='rgba(0,0,0,0)',
             font=dict(family="Arial", size=12, color="#424242"),
-            margin=dict(t=100, b=50), 
+            margin=dict(t=80, b=50), 
             legend=dict(
                 orientation="h", 
                 yanchor="bottom",
-                y=1.05,
+                y=1.02,
                 xanchor="center",
                 x=0.5,
                 title_font=dict(size=1) 
@@ -308,11 +353,12 @@ with tab2:
             semua_teks = " ".join(df_working[teks_kolom].dropna().astype(str))
             
             if semua_teks.strip(): 
-                wordcloud = WordCloud(width=600, height=400, background_color='white', colormap='Blues').generate(semua_teks)
-                fig_wc, ax_wc = plt.subplots()
+                # Perbesar resolusi canvas WordCloud agar tetap jernih saat ditarik responsif
+                wordcloud = WordCloud(width=800, height=500, background_color='white', colormap='Blues').generate(semua_teks)
+                fig_wc, ax_wc = plt.subplots(figsize=(8, 5))
                 ax_wc.imshow(wordcloud, interpolation='bilinear')
                 ax_wc.axis('off')
-                st.pyplot(fig_wc)
+                st.pyplot(fig_wc, use_container_width=True)
             else:
                 st.info("Tidak ada data teks ulasan yang cukup untuk membuat WordCloud.")
 
@@ -335,7 +381,7 @@ with tab2:
                 ax_hm.set_xlabel("Periode (Bulan)", fontsize=9)
                 ax_hm.set_ylabel("", fontsize=9)
                 sns.despine(left=True, bottom=True)
-                st.pyplot(fig_hm)
+                st.pyplot(fig_hm, use_container_width=True)
             else:
                 st.success("Luar biasa! Tidak ada ulasan negatif (Rating 1 & 2) yang ditemukan dalam rentang waktu terfilter.")
 
@@ -370,14 +416,9 @@ with tab3:
             'stinky', 'trash'
         }
         
-        def clean_text(text):
-            text = str(text).lower()
-            text = re.sub(r'[^a-z\s]', '', text)
-            return text.strip()
-        
         user_input = st.text_area("Ketik ulasan terkait layanan pelabuhan (maks. 500 kata):", height=120)
         
-        if st.button("Analisis Ulasan", type="primary"):
+        if st.button("Analisis Ulasan", type="primary", use_container_width=True):
             if user_input:
                 
                 with st.spinner('Menerjemahkan dan menganalisis ulasan...'):
@@ -411,23 +452,17 @@ with tab3:
                 warna = "green" if prediksi == "POSITIF" else "red" if prediksi == "NEGATIF" else "gray"
                 
                 with result_col1:
-                    st.markdown(f"<div style='border: 1px solid lightgray; padding: 10px; border-radius: 5px;'>Hasil Prediksi AI:<br><b style='color:{warna}; font-size: 24px;'>{prediksi.upper()}</b></div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='border: 1px solid lightgray; padding: 10px; border-radius: 5px; text-align: center;'>Hasil Prediksi AI:<br><b style='color:{warna}; font-size: 24px;'>{prediksi.upper()}</b></div>", unsafe_allow_html=True)
                 
                 with result_col2:
                     st.write("**Tingkat Keyakinan (Probabilitas):**")
                     
                     if prediksi == "POSITIF":
-                        prob_pos = skor
-                        prob_neu = (1.0 - skor) / 2
-                        prob_neg = (1.0 - skor) / 2
+                        prob_pos, prob_neu, prob_neg = skor, (1.0 - skor)/2, (1.0 - skor)/2
                     elif prediksi == "NEGATIF":
-                        prob_neg = skor
-                        prob_neu = (1.0 - skor) / 2
-                        prob_pos = (1.0 - skor) / 2
+                        prob_neg, prob_neu, prob_pos = skor, (1.0 - skor)/2, (1.0 - skor)/2
                     else: 
-                        prob_neu = skor
-                        prob_pos = (1.0 - skor) / 2
-                        prob_neg = (1.0 - skor) / 2
+                        prob_neu, prob_pos, prob_neg = skor, (1.0 - skor)/2, (1.0 - skor)/2
                     
                     st.progress(float(prob_pos), text=f"Positif: {prob_pos:.1%}")
                     st.progress(float(prob_neu), text=f"Netral: {prob_neu:.1%}") 
@@ -440,34 +475,34 @@ with tab3:
                 kata_positif_ditemukan = kata_dalam_teks.intersection(kamus_positif)
                 kata_negatif_ditemukan = kata_dalam_teks.intersection(kamus_negatif)
                 
-                jml_pos = len(kata_positif_ditemukan)
-                jml_neg = len(kata_negatif_ditemukan)
-                
                 col_word1, col_word2 = st.columns(2)
                 
                 with col_word1:
                     if kata_positif_ditemukan:
                         kata_pos_str = ", ".join([f"`{k}`" for k in kata_positif_ditemukan])
-                        st.success(f"**Kata Positif Terdeteksi ({jml_pos}):**\n\n{kata_pos_str}")
+                        st.success(f"**Kata Positif Terdeteksi ({len(kata_positif_ditemukan)}):**\n\n{kata_pos_str}")
                     else:
                         st.info("**Kata Positif Terdeteksi:**\n\n0 kata.")
                         
                 with col_word2:
                     if kata_negatif_ditemukan:
                         kata_neg_str = ", ".join([f"`{k}`" for k in kata_negatif_ditemukan])
-                        st.error(f"**Kata Negatif Terdeteksi ({jml_neg}):**\n\n{kata_neg_str}")
+                        st.error(f"**Kata Negatif Terdeteksi ({len(kata_negatif_ditemukan)}):**\n\n{kata_neg_str}")
                     else:
                         st.info("**Kata Negatif Terdeteksi:**\n\n0 kata.")
                         
-                if prediksi == "POSITIF" and (jml_neg > jml_pos):
+                if prediksi == "POSITIF" and (len(kata_negatif_ditemukan) > len(kata_positif_ditemukan)):
                     st.warning("💡 **Catatan Analisis:** Model menyimpulkan ulasan ini **Positif**, meskipun terdapat lebih banyak kata bernada negatif. Hal ini terjadi karena model IndoBERT memahami konteks kalimat utuh (misal: kata penyangkalan 'tidak buruk').")
                     
-                elif prediksi == "NEGATIF" and (jml_pos > jml_neg):
+                elif prediksi == "NEGATIF" and (len(kata_positif_ditemukan) > len(kata_negatif_ditemukan)):
                     st.warning("💡 **Catatan Analisis:** Model menyimpulkan ulasan ini **Negatif**, meskipun terdapat lebih banyak kata bernada positif. Harap perhatikan konteks kalimat (misal: sarkasme).")
                 
                 if user_input != teks_terjemahan:
                     st.markdown(f"<small style='color:gray;'>*Sistem mendeteksi bahasa asing. Kalimat diterjemahkan menjadi: '{teks_terjemahan}' sebelum diprediksi oleh AI.*</small>", unsafe_allow_html=True)
 
+# ==========================================
+# 8. FOOTER: INSIGHTS & DATA MENTAH
+# ==========================================
 st.markdown("---")
 st.subheader("💡 Insights & Rekomendasi Manajerial")
 if 'sentiment' in df_working.columns:
@@ -482,4 +517,4 @@ with st.expander("Lihat Data Ulasan Mentah (Tabel)"):
     if 'aspects' in df_working.columns:
         available_cols.append('aspects')
         
-    st.dataframe(df_working[available_cols])
+    st.dataframe(df_working[available_cols], use_container_width=True)
