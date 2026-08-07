@@ -1,5 +1,6 @@
 # app.py
 import streamlit as st
+import streamlit.components.v1 as components  # <-- TAMBAHAN IMPORT
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -27,7 +28,8 @@ sns.set_palette("Blues_d")
 # ==========================================
 # 1. KONFIGURASI HALAMAN & CSS RESPONSIVE
 # ==========================================
-st.set_page_config(page_title="Dashboard Analisis Pelabuhan", layout="wide", initial_sidebar_state="auto")
+# UBAHAN: initial_sidebar_state diubah menjadi "expanded"
+st.set_page_config(page_title="Dashboard Analisis Pelabuhan", layout="wide", initial_sidebar_state="expanded")
 
 # CSS Kustom untuk memaksimalkan ruang di layar HP (Mobile Friendly)
 responsive_css = """
@@ -196,6 +198,25 @@ else:
 
 st.title("Dashboard Analisis Sentimen Pelabuhan")
 st.markdown("<p style='font-size: 16px; color: gray; margin-top:-15px;'>powered by Tim Analitik Polibatam</p>", unsafe_allow_html=True)
+
+# ==========================================
+# TAMBAHAN: TOMBOL TOGGLE SIDEBAR
+# ==========================================
+if st.button("☰ Tampilkan / Tutup Sidebar"):
+    components.html(
+        """
+        <script>
+        const doc = window.parent.document;
+        const toggleBtn = doc.querySelector('[data-testid="collapsedControl"]');
+        if (toggleBtn) {
+            toggleBtn.click();
+        }
+        </script>
+        """,
+        height=0, 
+        width=0
+    )
+
 st.markdown("---")
 
 if df_working.empty:
