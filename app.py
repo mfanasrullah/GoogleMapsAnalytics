@@ -18,22 +18,14 @@ from aspect.aspect import AspectExtractor
 from aspect.summary import AspectSummarizer
 from sentiment.indobert import SentimentAnalyzer
 
-# ==========================================
-# 0. KONFIGURASI TEMA & PALETTE WARNA CORPORATE
-# ==========================================
 sns.set_theme(style="whitegrid")
 sns.set_palette("Blues_d")
 
-# ==========================================
-# 1. KONFIGURASI HALAMAN & CSS RESPONSIVE
-# ==========================================
-# Default sidebar dibuka (expanded) di layar besar
+
 st.set_page_config(page_title="Dashboard Analisis Pelabuhan", layout="wide", initial_sidebar_state="expanded")
 
-# CSS Kustom untuk memaksimalkan ruang di layar HP (Mobile Friendly)
 responsive_css = """
 <style>
-    /* Mengurangi padding bawaan Streamlit agar layar HP lebih lega */
     .block-container {
         padding-top: 2rem;
         padding-bottom: 2rem;
@@ -41,11 +33,9 @@ responsive_css = """
         padding-right: 1rem;
     }
     
-    /* Menyembunyikan opsi Deploy/Menu bawaan saja, Header TETAP DITAMPILKAN agar tombol sidebar muncul */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     
-    /* Memastikan teks KPI / Metrik tidak meluber di HP */
     div[data-testid="metric-container"] > div > div {
         font-size: 1.6rem !important;
         word-wrap: break-word;
@@ -68,9 +58,7 @@ def load_logo():
 
 logo_polibatam = load_logo()
 
-# ==========================================
-# FUNGSI PARSING WAKTU DUA BAHASA (ID & EN)
-# ==========================================
+
 def parse_gmaps_time(time_str):
     if pd.isna(time_str) or str(time_str).strip() == "": 
         return datetime.now()
@@ -99,9 +87,7 @@ def parse_gmaps_time(time_str):
     
     return now
 
-# ==========================================
-# 2. FUNGSI UNTUK MEMUAT DATA & MODEL
-# ==========================================
+
 @st.cache_data(ttl="1d") 
 def load_data():
     file_path = os.path.join(DATA_PROCESSED, "final_dataset.csv")
@@ -136,9 +122,7 @@ if df_full is None or df_full.empty:
     st.error("Data ulasan belum tersedia. Silakan jalankan `python main.py` terlebih dahulu untuk melakukan scraping.")
     st.stop()
 
-# ==========================================
-# 3. SIDEBAR (FILTERS & BRANDING)
-# ==========================================
+
 with st.sidebar:
     if logo_polibatam:
         if isinstance(logo_polibatam, PILImage.Image):
@@ -181,9 +165,7 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("<small>Dikembangkan oleh Tim Analitik Polibatam</small>", unsafe_allow_html=True)
 
-# ==========================================
-# 4. MEMPROSES DATA BERDASARKAN FILTER
-# ==========================================
+
 df_working = df_full[df_full['pelabuhan'].isin(selected_ports)]
 
 if start_date <= end_date:
@@ -202,9 +184,7 @@ if df_working.empty:
     st.warning("⚠️ Tidak ada data pelabuhan yang dipilih atau sesuai rentang waktu. Sesuaikan filter di sidebar.")
     st.stop()
 
-# ==========================================
-# 6. BODY - KPI ROW (RINGKASAN METRIK UTAMA)
-# ==========================================
+
 kpi_col1, kpi_col2, kpi_col3 = st.columns(3)
 
 total_reviews = len(df_working)
@@ -220,9 +200,7 @@ with kpi_col3:
 
 st.markdown("---")
 
-# ==========================================
-# 7. BODY - PEMBUATAN TABS
-# ==========================================
+
 tab1, tab2, tab3 = st.tabs([
     "📊 Visualisasi Data", 
     "☁️ WordCloud & Heatmap", 
@@ -500,9 +478,7 @@ with tab3:
                 if user_input != teks_terjemahan:
                     st.markdown(f"<small style='color:gray;'>*Sistem mendeteksi bahasa asing. Kalimat diterjemahkan menjadi: '{teks_terjemahan}' sebelum diprediksi oleh AI.*</small>", unsafe_allow_html=True)
 
-# ==========================================
-# 8. FOOTER: INSIGHTS & DATA MENTAH
-# ==========================================
+
 st.markdown("---")
 st.subheader("💡 Insights & Rekomendasi Manajerial")
 if 'sentiment' in df_working.columns:
