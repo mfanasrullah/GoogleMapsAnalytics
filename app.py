@@ -24,6 +24,7 @@ sns.set_palette("Blues_d")
 
 st.set_page_config(page_title="Dashboard Analisis Pelabuhan", layout="wide", initial_sidebar_state="expanded")
 
+# --- PERUBAHAN ADA DI SINI: Penambahan CSS untuk menyembunyikan ikon GitHub & Toolbar ---
 responsive_css = """
 <style>
     .block-container {
@@ -33,8 +34,13 @@ responsive_css = """
         padding-right: 1rem;
     }
     
+    /* Menyembunyikan menu hamburger (kiri) dan footer */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
+    
+    /* Menyembunyikan header dan toolbar atas (termasuk ikon GitHub) */
+    header {visibility: hidden;}
+    [data-testid="stToolbar"] {visibility: hidden;}
     
     div[data-testid="metric-container"] > div > div {
         font-size: 1.6rem !important;
@@ -208,7 +214,6 @@ tab1, tab2, tab3 = st.tabs([
 ])
 
 with tab1:
-    # Streamlit otomatis akan menumpuk (stack) col1 dan col2 ini jika di HP
     col1, col2 = st.columns(2)
     
     with col1:
@@ -221,7 +226,6 @@ with tab1:
         ax_pop.set_xlabel("Total Ulasan (Volume)", fontsize=10)
         ax_pop.set_ylabel("", fontsize=10)
         sns.despine(left=True, bottom=True)
-        # Menambahkan use_container_width=True agar responsif
         st.pyplot(fig_pop, use_container_width=True)
 
     with col2:
@@ -274,9 +278,6 @@ with tab1:
 
         urutan_sentimen = ["NEGATIF", "NETRAL", "POSITIF"]
         
-        # PERBAIKAN RESPONSIVITAS: 
-        # Mengubah facet_col_wrap menjadi 2 agar tidak berdesakan di layar kecil
-        # Mengkalkulasi tinggi figure secara dinamis sesuai jumlah pelabuhan
         jml_pelabuhan_unik = df_aspect_summary['pelabuhan'].nunique()
         baris_dibutuhkan = math.ceil(jml_pelabuhan_unik / 2) 
         dynamic_height = max(500, baris_dibutuhkan * 400)
@@ -287,7 +288,7 @@ with tab1:
             y='count', 
             color='sentiment', 
             facet_col='pelabuhan', 
-            facet_col_wrap=2, # Diubah dari 3 menjadi 2
+            facet_col_wrap=2,
             facet_row_spacing=0.15,   
             facet_col_spacing=0.08, 
             category_orders={"sentiment": urutan_sentimen}, 
@@ -300,7 +301,7 @@ with tab1:
         )
         
         fig_aspect.update_layout(
-            height=dynamic_height, # Tinggi dinamis             
+            height=dynamic_height,             
             plot_bgcolor='rgba(0,0,0,0)', 
             paper_bgcolor='rgba(0,0,0,0)',
             font=dict(family="Arial", size=12, color="#424242"),
@@ -331,7 +332,6 @@ with tab2:
             semua_teks = " ".join(df_working[teks_kolom].dropna().astype(str))
             
             if semua_teks.strip(): 
-                # Perbesar resolusi canvas WordCloud agar tetap jernih saat ditarik responsif
                 wordcloud = WordCloud(width=800, height=500, background_color='white', colormap='Blues').generate(semua_teks)
                 fig_wc, ax_wc = plt.subplots(figsize=(8, 5))
                 ax_wc.imshow(wordcloud, interpolation='bilinear')
