@@ -579,5 +579,3 @@ with st.expander("Lihat Data Ulasan Mentah (Tabel)"):
         available_cols.append('aspects')
         
     st.dataframe(df_working[available_cols], use_container_width=True)
-
-```
