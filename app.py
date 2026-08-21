@@ -436,7 +436,7 @@ with tab3:
 
 with tab4:
     st.header("Evaluasi Kinerja Model SVM")
-    st.markdown("Bagian ini menampilkan metrik performa model Support Vector Machine sesuai dengan rumusan masalah pada proposal penelitian (Akurasi, Presisi, Recall, dan F1-Score).")
+    st.markdown("Bagian ini menampilkan metrik performa model Support Vector Machine.")
     
     metrik_col1, metrik_col2, metrik_col3, metrik_col4 = st.columns(4)
 
@@ -451,7 +451,7 @@ with tab4:
     with metrik_col4: st.metric(label="F1-Score", value=f"{f1_val:.1%}")
     
     st.markdown("---")
-    st.markdown("#### Matriks Kebingungan (Confusion Matrix)")
+    st.markdown("#### Confusion Matrix")
     st.info("Visualisasi ini menunjukan kemampuan model dalam membedakan setiap kelas (Positif, Netral, Negatif). Sumbu Y adalah kelas asli (Actual), dan Sumbu X adalah tebakan model (Predicted).")
     
     # DATA CONFUSION MATRIX YANG SESUAI DENGAN EVALUASI RIIL (Total 486 data uji)
