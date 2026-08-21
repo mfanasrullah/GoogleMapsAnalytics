@@ -464,12 +464,12 @@ with tab4:
     
     fig_cm, ax_cm = plt.subplots(figsize=(6, 4))
     sns.heatmap(data_cm, annot=True, fmt='d', cmap='Blues', xticklabels=labels, yticklabels=labels, ax=ax_cm)
-    ax_cm.set_xlabel('Predicted Label (Tebakan Mesin)')
-    ax_cm.set_ylabel('True Label (Label Asli)')
+    ax_cm.set_xlabel('Predicted Label')
+    ax_cm.set_ylabel('True Label')
     st.pyplot(fig_cm)
 
 st.markdown("---")
-st.subheader("💡 Insights & Rekomendasi Manajerial")
+st.subheader("💡 Insights & Rekomendasi ")
 if 'sentiment' in df_working.columns:
     insights = generate_insights(df_working)
     for i, insight in enumerate(insights, 1):
