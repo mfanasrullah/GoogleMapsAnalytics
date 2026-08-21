@@ -26,19 +26,15 @@ sns.set_theme(style="whitegrid")
 sns.set_palette("Blues_d")
 
 # ==========================================
-# INISIALISASI STATE UNTUK TOGGLE SIDEBAR
+# INISIALISASI & CONFIG
 # ==========================================
-if 'sidebar_state' not in st.session_state:
-    st.session_state.sidebar_state = 'expanded'
-
-# Set konfigurasi halaman menggunakan nilai dari session state
-# PERBAIKAN: Menghapus tanda pagar (#) agar state ini benar-benar diterapkan ke UI
 st.set_page_config(
     page_title="Dashboard Analisis Pelabuhan", 
     layout="wide", 
-    initial_sidebar_state=st.session_state.sidebar_state
+    initial_sidebar_state="expanded"
 )
 
+# Header dan Toolbar dihapus dari visibility: hidden agar muncul kembali
 responsive_css = """
 <style>
     .block-container {
@@ -49,16 +45,9 @@ responsive_css = """
     }
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-
-    [data-testid="stToolbar"] {visibility: hidden;}
     div[data-testid="metric-container"] > div > div {
         font-size: 1.6rem !important;
         word-wrap: break-word;
-    }
-    /* Mengubah tampilan tombol toggle sidebar kustom */
-    .stButton>button {
-        margin-top: -10px;
-        margin-bottom: 10px;
     }
 </style>
 """
@@ -256,21 +245,8 @@ else:
 # MAIN CONTENT AREA
 # ==========================================
 
-# LOGIKA TOMBOL TOGGLE SIDEBAR DI AREA UTAMA
-col_title, col_toggle = st.columns([5, 1])
-with col_title:
-    st.title("Dashboard Analisis Sentimen Pelabuhan")
-    st.markdown("<p style='font-size: 16px; color: gray; margin-top:-15px;'>powered by Tim Analitik Polibatam</p>", unsafe_allow_html=True)
-
-with col_toggle:
-    # Tombol toggle mengubah nilai session_state dan melakukan rerun
-    btn_label = "⏩ Tampilkan Sidebar" if st.session_state.sidebar_state == 'collapsed' else "⏪ Sembunyikan Sidebar"
-    if st.button(btn_label, use_container_width=True):
-        if st.session_state.sidebar_state == 'expanded':
-            st.session_state.sidebar_state = 'collapsed'
-        else:
-            st.session_state.sidebar_state = 'expanded'
-        st.rerun()
+st.title("Dashboard Analisis Sentimen Pelabuhan")
+st.markdown("<p style='font-size: 16px; color: gray; margin-top:-15px;'>powered by Tim Analitik Polibatam</p>", unsafe_allow_html=True)
 
 st.markdown("---")
 
