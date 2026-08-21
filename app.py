@@ -16,7 +16,8 @@ import random
 import matplotlib.ticker as ticker # Tambahan untuk mengatur kerapatan sumbu
 
 from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
-from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory
+# PERBAIKAN 1: Tambahkan ArrayDictionary dan StopWordRemover pada import Sastrawi
+from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory, StopWordRemover, ArrayDictionary
 
 from config import DATA_PROCESSED
 from recommendation.insight import generate_insights
@@ -62,13 +63,36 @@ def show_large_plot(fig, plot_type="pyplot"):
         st.plotly_chart(fig, use_container_width=True)
 # ==========================================
 
+# ==========================================
+# PERBAIKAN 2: Integrasi Custom Stopwords ke Sastrawi
+# ==========================================
 @st.cache_resource
 def init_preprocessing_tools():
     stemmer_factory = StemmerFactory()
     stemmer = stemmer_factory.create_stemmer()
 
+    # Ambil stopword bawaan
     stopword_factory = StopWordRemoverFactory()
-    stopword_remover = stopword_factory.create_stop_word_remover()
+    default_stopwords = stopword_factory.get_stop_words()
+    
+    # Tambahkan stopword khusus domain pelabuhan batam
+    custom_stopwords = [
+        'menjadi', 'kemudian', 'selama', 'untuk', 'utk', 'dari', 'pada', 'di', 'ke', 'dengan', 'dalam', 'yang', 'dan', 'atau', 'tapi',
+        'saya', 'kami', 'kita', 'mereka', 'orang', 'orang-orang',
+        'tiba', 'kedatangan', 'berangkat', 'keberangkatan', 'perjalanan', 'waktu', 'jadwal', 'hari', 'pagi', 'malam',
+        'lakukan', 'melakukan', 'ambil', 'mengambil', 'beri', 'memberikan', 'minta', 'bertanya', 'tahu', 'lihat', 'melihat', 'pakai', 'pake', 'bilang', 'kata', 'mengatakan', 'miliki', 'punya', 'ada',
+        'batam', 'nongsa', 'karimun', 'dumai', 'kepri', 'johor', 'singapura',
+        'pelabuhan', 'terminal', 'dermaga', 'pintu', 'jalur', 'rute',
+        'kapal', 'fery', 'boat', 'angkutan', 'taksi', 'ojek', 'kendaraan', 'bus',
+        'hotel', 'toko', 'mall', 'mal', 'restoran', 'warung', 'toilet', 'parkir', 'parkiran',
+        'terlalu', 'sangat', 'cukup', 'banyak', 'terus', 'pas', 'sendiri',
+        'imigrasi', 'petugas', 'staf', 'bea cukai', 'porter', 'tiket', 'proses', 'sistem', 'renovasi', 'antrian', 'antrean', 'covid'
+    ]
+    
+    # Gabungkan dan masukkan ke engine Sastrawi
+    all_stopwords = default_stopwords + custom_stopwords
+    dictionary = ArrayDictionary(all_stopwords)
+    stopword_remover = StopWordRemover(dictionary)
 
     return stemmer, stopword_remover
 
@@ -453,10 +477,6 @@ with tab1:
         else:
             st.warning("Data aspek belum diekstraksi. Pastikan model aspect extractor berjalan dengan benar.")
 
-
-# ==========================================
-# PERBAIKAN: TAB 2 - WORDCLOUD & HEATMAP
-# ==========================================
 with tab2:
     col_wc, col_hm = st.columns(2)
 
@@ -477,14 +497,31 @@ with tab2:
             semua_teks = " ".join(df_working[teks_kolom].dropna().astype(str))
 
             if semua_teks.strip(): 
-                # collocations=True diaktifkan untuk menangkap N-grams
+                # ==========================================
+                # PERBAIKAN 3: Custom Stopwords untuk WordCloud
+                # ==========================================
+                custom_stopwords = set([
+                    'menjadi', 'kemudian', 'selama', 'untuk', 'utk', 'dari', 'pada', 'di', 'ke', 'dengan', 'dalam', 'yang', 'dan', 'atau', 'tapi',
+                    'saya', 'kami', 'kita', 'mereka', 'orang', 'orang-orang',
+                    'tiba', 'kedatangan', 'berangkat', 'keberangkatan', 'perjalanan', 'waktu', 'jadwal', 'hari', 'pagi', 'malam',
+                    'lakukan', 'melakukan', 'ambil', 'mengambil', 'beri', 'memberikan', 'minta', 'bertanya', 'tahu', 'lihat', 'melihat', 'pakai', 'pake', 'bilang', 'kata', 'mengatakan', 'miliki', 'punya', 'ada',
+                    'batam', 'nongsa', 'karimun', 'dumai', 'kepri', 'johor', 'singapura',
+                    'pelabuhan', 'terminal', 'dermaga', 'pintu', 'jalur', 'rute',
+                    'kapal', 'fery', 'boat', 'angkutan', 'taksi', 'ojek', 'kendaraan', 'bus',
+                    'hotel', 'toko', 'mall', 'mal', 'restoran', 'warung', 'toilet', 'parkir', 'parkiran',
+                    'terlalu', 'sangat', 'cukup', 'banyak', 'terus', 'pas', 'sendiri',
+                    'imigrasi', 'petugas', 'staf', 'bea cukai', 'porter', 'tiket', 'proses', 'sistem', 'renovasi', 'antrian', 'antrean', 'covid'
+                ])
+
+                # Parameter stopwords ditambahkan ke dalam WordCloud
                 wordcloud = WordCloud(
                     width=800, 
                     height=500, 
                     background_color='white', 
                     colormap='Blues',
                     collocations=True, 
-                    min_word_length=3
+                    min_word_length=3,
+                    stopwords=custom_stopwords # <--- Filter stopword diterapkan di sini
                 ).generate(semua_teks)
                 
                 fig_wc, ax_wc = plt.subplots(figsize=(8, 5))
@@ -499,7 +536,7 @@ with tab2:
             st.info("Kolom teks tidak ditemukan untuk membuat WordCloud.")
 
     # ----------------------------------------
-    # UPDATE HEATMAP DIMULAI DI SINI
+    # BAGIAN HEATMAP
     # ----------------------------------------
     with col_hm:
         st.markdown("#### Heatmap Keluhan Konsumen")
@@ -518,22 +555,14 @@ with tab2:
                 pivot_keluhan = pivot_keluhan.reindex(index=selected_ports, fill_value=0)
                 pivot_keluhan = pivot_keluhan.loc[:, (pivot_keluhan != 0).any(axis=0)]
 
-                # PERBAIKAN 1 & 3: Melebarkan ukuran plot (figsize diperbesar horizontalnya)
-                # agar aspect ratio sel menjadi lebih kotak/proporsional
                 fig_hm, ax_hm = plt.subplots(figsize=(14, 5)) 
-
-                # PERBAIKAN 2: Menggunakan annot_kws={"weight": "bold"} dan membiarkan 
-                # seaborn yang menangani auto-color contrast teks di dalam box
                 sns.heatmap(pivot_keluhan, cmap='Reds', annot=True, fmt='d', 
                             linewidths=1, ax=ax_hm, annot_kws={"size": 10, "weight": "bold"})
                 
-                # PERBAIKAN 4: Melengkapi label dan memperbaiki hierarki font
                 ax_hm.set_xlabel("Periode (Bulan)", fontsize=11, fontweight='bold', labelpad=10)
                 ax_hm.set_ylabel("Terminal Feri", fontsize=11, fontweight='bold', labelpad=10)
 
-                # PERBAIKAN 1 (Lanjutan): Mengurangi kerapatan label sumbu X (tampil tiap 3 bulan)
                 ax_hm.xaxis.set_major_locator(ticker.MultipleLocator(base=3))
-
                 plt.setp(ax_hm.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
                 plt.setp(ax_hm.get_yticklabels(), rotation=0)
 
@@ -544,9 +573,6 @@ with tab2:
                     show_large_plot(fig_hm, "pyplot")
             else:
                 st.success("Luar biasa! Tidak ada ulasan negatif (Rating 1 & 2) yang ditemukan dalam rentang waktu terfilter.")
-    # ----------------------------------------
-    # UPDATE HEATMAP BERAKHIR DI SINI
-    # ----------------------------------------
 
 with tab3:
     st.header("Sistem Uji Sentimen Real-Time")
