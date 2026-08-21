@@ -132,7 +132,6 @@ def load_data():
 @st.cache_resource
 def load_svm_model():
     try:
-        # PERBAIKAN: Jalur disesuaikan ke data/models/
         svm_model = joblib.load('data/models/svm_model.pkl')
         tfidf_vectorizer = joblib.load('data/models/tfidf_vectorizer.pkl')
         return svm_model, tfidf_vectorizer
@@ -160,7 +159,7 @@ with st.sidebar:
     
     if st.button("🔄 Segarkan Data Sekarang", use_container_width=True):
         st.cache_data.clear()
-        st.cache_resource.clear() # Tambahan untuk mereset cache model juga
+        st.cache_resource.clear()
         st.rerun()
 
     st.markdown("---")
@@ -385,7 +384,6 @@ with tab3:
     st.markdown("Ketik ulasan di bawah ini untuk melihat bagaimana **Support Vector Machine (SVM) dan TF-IDF** memprediksi sentimen teks secara instan berdasarkan data latih pelabuhan.")
     
     if svm_model is None or tfidf_vectorizer is None:
-        # PERBAIKAN: Teks error disesuaikan
         st.error("⚠️ Model SVM (`svm_model.pkl`) atau TF-IDF Vectorizer (`tfidf_vectorizer.pkl`) belum tersedia di folder `data/models/`. Silakan jalankan script pelatihan model terlebih dahulu.")
     else:
         user_input = st.text_area("Ketik ulasan terkait layanan pelabuhan (maks. 500 kata):", height=120)
@@ -442,11 +440,10 @@ with tab4:
     
     metrik_col1, metrik_col2, metrik_col3, metrik_col4 = st.columns(4)
 
-    # PERBAIKAN: Nilai di bawah ini sudah diperbarui dengan evaluasi model terakhir Anda
-    akurasi_val = 0.78
-    presisi_val = 0.68
-    recall_val = 0.78
-    f1_val = 0.72
+    akurasi_val = 0.72
+    presisi_val = 0.76
+    recall_val = 0.72
+    f1_val = 0.73
     
     with metrik_col1: st.metric(label="Akurasi (Accuracy)", value=f"{akurasi_val:.1%}")
     with metrik_col2: st.metric(label="Presisi (Precision)", value=f"{presisi_val:.1%}")
@@ -457,7 +454,12 @@ with tab4:
     st.markdown("#### Matriks Kebingungan (Confusion Matrix)")
     st.info("Visualisasi ini menunjukan kemampuan model dalam membedakan setiap kelas (Positif, Netral, Negatif). Sumbu Y adalah kelas asli (Actual), dan Sumbu X adalah tebakan model (Predicted).")
     
-    data_cm = np.array([[28, 0, 33], [0, 0, 61], [8, 0, 356]])
+    # DATA CONFUSION MATRIX YANG SESUAI DENGAN EVALUASI RIIL (Total 486 data uji)
+    data_cm = np.array([
+        [38, 11, 12],
+        [10, 23, 28],
+        [26, 50, 288]
+    ])
     labels = ['Negatif', 'Netral', 'Positif']
     
     fig_cm, ax_cm = plt.subplots(figsize=(6, 4))
