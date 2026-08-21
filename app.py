@@ -303,15 +303,37 @@ with tab1:
         st.markdown("#### Distribusi Popularitas")
         pop_df = df_working['pelabuhan'].value_counts().reset_index()
         pop_df.columns = ['Pelabuhan', 'Jumlah Ulasan']
+        
+        # MENGGUNAKAN PLOTLY UNTUK BAR CHART
+        fig_pop = px.bar(
+            pop_df, 
+            x='Jumlah Ulasan', 
+            y='Pelabuhan', 
+            orientation='h',
+            color='Jumlah Ulasan',
+            color_continuous_scale='Blues',
+            text='Jumlah Ulasan',
+            labels={'Jumlah Ulasan': 'Total Ulasan (Volume)', 'Pelabuhan': ''}
+        )
+        
+        # Kustomisasi Hover Data
+        fig_pop.update_traces(
+            hovertemplate="<b>%{y}</b><br>Terdapat %{x} ulasan yang masuk di pelabuhan ini.<extra></extra>",
+            textposition='outside'
+        )
+        
+        fig_pop.update_layout(
+            height=400,
+            plot_bgcolor='rgba(0,0,0,0)',
+            coloraxis_showscale=False,
+            margin=dict(l=0, r=20, t=20, b=0)
+        )
+        fig_pop.update_xaxes(showgrid=False)
+        fig_pop.update_yaxes(categoryorder='total ascending')
 
-        fig_pop, ax_pop = plt.subplots(figsize=(8, 5))
-        sns.barplot(data=pop_df, x='Jumlah Ulasan', y='Pelabuhan', palette='Blues_d', ax=ax_pop) 
-        ax_pop.set_xlabel("Total Ulasan (Volume)", fontsize=10)
-        ax_pop.set_ylabel("", fontsize=10)
-        sns.despine(left=True, bottom=True)
-        st.pyplot(fig_pop, use_container_width=True)
+        st.plotly_chart(fig_pop, use_container_width=True)
         if st.button("🔍 Perbesar Diagram Popularitas", key="pop_btn"):
-            show_large_plot(fig_pop, "pyplot")
+            show_large_plot(fig_pop, "plotly")
 
     with col2:
         st.markdown("#### Kualitas (Rating) vs Volume")
@@ -321,16 +343,35 @@ with tab1:
                 Volume=('review_rating', 'count')
             ).reset_index()
 
-            fig_scat, ax_scat = plt.subplots(figsize=(8, 5))
-            sns.scatterplot(data=scatter_df, x='Volume', y='Rata_Rating', hue='pelabuhan', s=200, palette='deep', ax=ax_scat)
-            ax_scat.set_xlabel("Volume (Jumlah Ulasan)", fontsize=10)
-            ax_scat.set_ylabel("Kualitas (Rata-rata Rating)", fontsize=10)
-            ax_scat.set_ylim(1, 5.5) 
-            ax_scat.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=8, title='Pelabuhan')
-            sns.despine(left=True, bottom=True)
-            st.pyplot(fig_scat, use_container_width=True)
+            # MENGGUNAKAN PLOTLY UNTUK SCATTER PLOT
+            fig_scat = px.scatter(
+                scatter_df, 
+                x='Volume', 
+                y='Rata_Rating', 
+                color='pelabuhan', 
+                size='Volume',
+                size_max=30, # Mengatur ukuran maksimum bubble
+                labels={'Volume': 'Volume (Jumlah Ulasan)', 'Rata_Rating': 'Kualitas (Rata-rata Rating)', 'pelabuhan': 'Pelabuhan'}
+            )
+
+            # Kustomisasi Hover Data
+            fig_scat.update_traces(
+                hovertemplate="<b>%{customdata[0]}</b><br>Rata-rata Rating: %{y:.2f} Bintang<br>Total Ulasan: %{x}<extra></extra>",
+                customdata=scatter_df[['pelabuhan']]
+            )
+
+            fig_scat.update_layout(
+                height=400,
+                plot_bgcolor='rgba(0,0,0,0)',
+                yaxis=dict(range=[1, 5.5], showgrid=True, gridcolor='#EEEEEE'),
+                xaxis=dict(showgrid=True, gridcolor='#EEEEEE'),
+                margin=dict(l=0, r=0, t=20, b=0),
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            )
+
+            st.plotly_chart(fig_scat, use_container_width=True)
             if st.button("🔍 Perbesar Diagram Kualitas", key="scat_btn"):
-                show_large_plot(fig_scat, "pyplot")
+                show_large_plot(fig_scat, "plotly")
 
     st.markdown("---")
 
@@ -339,16 +380,35 @@ with tab1:
         trend_df = df_working.groupby(['bulan_tahun', 'pelabuhan']).size().reset_index(name='Jumlah')
         trend_df = trend_df.sort_values('bulan_tahun')
 
-        fig_trend, ax_trend = plt.subplots(figsize=(12, 5))
-        sns.lineplot(data=trend_df, x='bulan_tahun', y='Jumlah', hue='pelabuhan', marker='o', palette='muted', ax=ax_trend)
-        ax_trend.tick_params(axis='x', rotation=45, labelsize=9) 
-        ax_trend.set_xlabel("Periode (Bulan)", fontsize=10)
-        ax_trend.set_ylabel("Volume Ulasan", fontsize=10)
-        ax_trend.grid(True, linestyle='--', alpha=0.6)
-        sns.despine(left=True, bottom=True)
-        st.pyplot(fig_trend, use_container_width=True)
+        # MENGGUNAKAN PLOTLY UNTUK LINE CHART
+        fig_trend = px.line(
+            trend_df, 
+            x='bulan_tahun', 
+            y='Jumlah', 
+            color='pelabuhan', 
+            markers=True,
+            line_shape='linear',
+            labels={'bulan_tahun': 'Periode (Bulan)', 'Jumlah': 'Volume Ulasan', 'pelabuhan': 'Pelabuhan'}
+        )
+
+        # Kustomisasi Hover Data
+        fig_trend.update_traces(
+            hovertemplate="<b>%{customdata[0]}</b><br>Bulan: %{x}<br>Jumlah Ulasan: %{y}<extra></extra>",
+            customdata=trend_df[['pelabuhan']]
+        )
+
+        fig_trend.update_layout(
+            height=400,
+            plot_bgcolor='rgba(0,0,0,0)',
+            hovermode="x unified", # Menampilkan garis vertikal saat di-hover
+            yaxis=dict(showgrid=True, gridcolor='#EEEEEE'),
+            xaxis=dict(showgrid=False, tickangle=-45),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+        )
+
+        st.plotly_chart(fig_trend, use_container_width=True)
         if st.button("🔍 Perbesar Tren Volume Ulasan", key="trend_btn"):
-            show_large_plot(fig_trend, "pyplot")
+            show_large_plot(fig_trend, "plotly")
 
     st.markdown("---")
 
