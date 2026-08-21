@@ -50,17 +50,38 @@ responsive_css = """
 st.markdown(responsive_css, unsafe_allow_html=True)
 
 # ==========================================
-# FITUR BARU: FUNGSI POP-UP DIAGRAM BESAR
+# FITUR BARU: FUNGSI POP-UP DIAGRAM BESAR (DIUPDATE)
 # ==========================================
 @st.dialog("Tampilan Diagram Diperbesar", width="large")
-def show_large_plot(fig, plot_type="pyplot"):
+def show_large_plot(fig=None, plot_type="pyplot", extra_data=None):
     """Menampilkan diagram dalam pop-up dialog yang besar"""
-    if plot_type == "pyplot":
+    if plot_type == "pyplot" and fig is not None:
         st.pyplot(fig, use_container_width=True)
-    elif plot_type == "plotly":
+    elif plot_type == "plotly" and fig is not None:
         # Memperbesar ukuran tinggi khusus untuk pop-up plotly
         fig.update_layout(height=700)
         st.plotly_chart(fig, use_container_width=True)
+    elif plot_type == "heatmap_khusus" and extra_data is not None:
+        # Menggambar ulang heatmap dengan ukuran lebih besar untuk pop-up
+        pivot_data = extra_data['pivot']
+        
+        # Ukuran figure jauh lebih lebar
+        fig_large, ax_large = plt.subplots(figsize=(20, 8)) 
+        
+        sns.heatmap(pivot_data, cmap='Reds', annot=True, fmt='d', 
+                    linewidths=1, ax=ax_large, annot_kws={"size": 12, "weight": "bold"})
+        
+        ax_large.set_xlabel("Periode (Bulan)", fontsize=14, fontweight='bold', labelpad=15)
+        ax_large.set_ylabel("Terminal Feri", fontsize=14, fontweight='bold', labelpad=15)
+
+        # Tampilkan SEMUA label (karena layarnya sudah cukup lebar)
+        ax_large.xaxis.set_major_locator(ticker.MultipleLocator(base=1))
+        
+        plt.setp(ax_large.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor", fontsize=10)
+        plt.setp(ax_large.get_yticklabels(), rotation=0, fontsize=12)
+
+        sns.despine(left=True, bottom=True)
+        st.pyplot(fig_large, use_container_width=True)
 # ==========================================
 
 # ==========================================
@@ -536,7 +557,7 @@ with tab2:
             st.info("Kolom teks tidak ditemukan untuk membuat WordCloud.")
 
     # ----------------------------------------
-    # BAGIAN HEATMAP
+    # BAGIAN HEATMAP 
     # ----------------------------------------
     with col_hm:
         st.markdown("#### Heatmap Keluhan Konsumen")
@@ -555,6 +576,7 @@ with tab2:
                 pivot_keluhan = pivot_keluhan.reindex(index=selected_ports, fill_value=0)
                 pivot_keluhan = pivot_keluhan.loc[:, (pivot_keluhan != 0).any(axis=0)]
 
+                # TAMPILAN DEFAULT HEATMAP (Lebih rapat)
                 fig_hm, ax_hm = plt.subplots(figsize=(14, 5)) 
                 sns.heatmap(pivot_keluhan, cmap='Reds', annot=True, fmt='d', 
                             linewidths=1, ax=ax_hm, annot_kws={"size": 10, "weight": "bold"})
@@ -562,6 +584,7 @@ with tab2:
                 ax_hm.set_xlabel("Periode (Bulan)", fontsize=11, fontweight='bold', labelpad=10)
                 ax_hm.set_ylabel("Terminal Feri", fontsize=11, fontweight='bold', labelpad=10)
 
+                # Set locator sumbu x ke jarak 3 bulan untuk layout standard
                 ax_hm.xaxis.set_major_locator(ticker.MultipleLocator(base=3))
                 plt.setp(ax_hm.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
                 plt.setp(ax_hm.get_yticklabels(), rotation=0)
@@ -569,8 +592,11 @@ with tab2:
                 sns.despine(left=True, bottom=True)
                 st.pyplot(fig_hm, use_container_width=True)
                 
+                # TOMBOL PERBESAR
                 if st.button("🔍 Perbesar Heatmap", key="hm_btn"):
-                    show_large_plot(fig_hm, "pyplot")
+                    # Kirim data pivot ke pop-up agar digambar ulang
+                    extra = {'pivot': pivot_keluhan, 'ports': selected_ports}
+                    show_large_plot(fig=None, plot_type="heatmap_khusus", extra_data=extra)
             else:
                 st.success("Luar biasa! Tidak ada ulasan negatif (Rating 1 & 2) yang ditemukan dalam rentang waktu terfilter.")
 
