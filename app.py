@@ -45,6 +45,7 @@ responsive_css = """
     }
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
+    header {visibility: hidden;}
     div[data-testid="metric-container"] > div > div {
         font-size: 1.6rem !important;
         word-wrap: break-word;
