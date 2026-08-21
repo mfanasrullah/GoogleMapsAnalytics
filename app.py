@@ -49,7 +49,6 @@ responsive_css = """
     }
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    header {visibility: hidden;}
     [data-testid="stToolbar"] {visibility: hidden;}
     div[data-testid="metric-container"] > div > div {
         font-size: 1.6rem !important;
