@@ -13,21 +13,30 @@ import math
 import joblib
 import numpy as np
 import random 
-import matplotlib.ticker as ticker # Tambahan untuk mengatur kerapatan sumbu
+import matplotlib.ticker as ticker 
 
 from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
-# PERBAIKAN 1: Tambahkan ArrayDictionary dan StopWordRemover pada import Sastrawi
 from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory, StopWordRemover, ArrayDictionary
 
 from config import DATA_PROCESSED
-# recommendation.insight tidak lagi wajib jika digantikan logika dinamis
 from aspect.aspect import AspectExtractor
 from aspect.summary import AspectSummarizer
 
 sns.set_theme(style="whitegrid")
 sns.set_palette("Blues_d")
 
-st.set_page_config(page_title="Dashboard Analisis Pelabuhan", layout="wide", initial_sidebar_state="expanded")
+# ==========================================
+# INISIALISASI STATE UNTUK TOGGLE SIDEBAR
+# ==========================================
+if 'sidebar_state' not in st.session_state:
+    st.session_state.sidebar_state = 'expanded'
+
+# Set konfigurasi halaman menggunakan nilai dari session state
+st.set_page_config(
+    page_title="Dashboard Analisis Pelabuhan", 
+    layout="wide", 
+    initial_sidebar_state=st.session_state.sidebar_state
+)
 
 responsive_css = """
 <style>
@@ -45,58 +54,47 @@ responsive_css = """
         font-size: 1.6rem !important;
         word-wrap: break-word;
     }
+    /* Mengubah tampilan tombol toggle sidebar kustom */
+    .stButton>button {
+        margin-top: -10px;
+        margin-bottom: 10px;
+    }
 </style>
 """
 st.markdown(responsive_css, unsafe_allow_html=True)
 
 # ==========================================
-# FITUR BARU: FUNGSI POP-UP DIAGRAM BESAR (DIUPDATE)
+# FITUR BARU: FUNGSI POP-UP DIAGRAM BESAR
 # ==========================================
 @st.dialog("Tampilan Diagram Diperbesar", width="large")
 def show_large_plot(fig=None, plot_type="pyplot", extra_data=None):
-    """Menampilkan diagram dalam pop-up dialog yang besar"""
     if plot_type == "pyplot" and fig is not None:
         st.pyplot(fig, use_container_width=True)
     elif plot_type == "plotly" and fig is not None:
-        # Memperbesar ukuran tinggi khusus untuk pop-up plotly
         fig.update_layout(height=700)
         st.plotly_chart(fig, use_container_width=True)
     elif plot_type == "heatmap_khusus" and extra_data is not None:
-        # Menggambar ulang heatmap dengan ukuran lebih besar untuk pop-up
         pivot_data = extra_data['pivot']
-        
-        # Ukuran figure jauh lebih lebar
         fig_large, ax_large = plt.subplots(figsize=(20, 8)) 
-        
         sns.heatmap(pivot_data, cmap='Reds', annot=True, fmt='d', 
                     linewidths=1, ax=ax_large, annot_kws={"size": 12, "weight": "bold"})
-        
         ax_large.set_xlabel("Periode (Bulan)", fontsize=14, fontweight='bold', labelpad=15)
         ax_large.set_ylabel("Terminal Feri", fontsize=14, fontweight='bold', labelpad=15)
-
-        # Tampilkan SEMUA label (karena layarnya sudah cukup lebar)
         ax_large.xaxis.set_major_locator(ticker.MultipleLocator(base=1))
-        
         plt.setp(ax_large.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor", fontsize=10)
         plt.setp(ax_large.get_yticklabels(), rotation=0, fontsize=12)
-
         sns.despine(left=True, bottom=True)
         st.pyplot(fig_large, use_container_width=True)
-# ==========================================
 
 # ==========================================
-# PERBAIKAN 2: Integrasi Custom Stopwords ke Sastrawi
+# PREPROCESSING & LOAD DATA
 # ==========================================
 @st.cache_resource
 def init_preprocessing_tools():
     stemmer_factory = StemmerFactory()
     stemmer = stemmer_factory.create_stemmer()
-
-    # Ambil stopword bawaan
     stopword_factory = StopWordRemoverFactory()
     default_stopwords = stopword_factory.get_stop_words()
-    
-    # Tambahkan stopword khusus domain pelabuhan batam
     custom_stopwords = [
         'menjadi', 'kemudian', 'selama', 'untuk', 'utk', 'dari', 'pada', 'di', 'ke', 'dengan', 'dalam', 'yang', 'dan', 'atau', 'tapi',
         'saya', 'kami', 'kita', 'mereka', 'orang', 'orang-orang',
@@ -109,12 +107,9 @@ def init_preprocessing_tools():
         'terlalu', 'sangat', 'cukup', 'banyak', 'terus', 'pas', 'sendiri',
         'imigrasi', 'petugas', 'staf', 'bea cukai', 'porter', 'tiket', 'proses', 'sistem', 'renovasi', 'antrian', 'antrean', 'covid'
     ]
-    
-    # Gabungkan dan masukkan ke engine Sastrawi
     all_stopwords = default_stopwords + custom_stopwords
     dictionary = ArrayDictionary(all_stopwords)
     stopword_remover = StopWordRemover(dictionary)
-
     return stemmer, stopword_remover
 
 stemmer, stopword_remover = init_preprocessing_tools()
@@ -142,25 +137,19 @@ logo_polibatam = load_logo()
 
 def parse_gmaps_time(time_str):
     now = datetime.now()
-
     if pd.isna(time_str) or str(time_str).strip() == "": 
         return now
-
     time_str = str(time_str).lower()
-
     if any(x in time_str for x in ['sebulan', 'a month', '1 month']): return now - timedelta(days=30 + random.randint(-5, 5))
     if any(x in time_str for x in ['setahun', 'a year', '1 year']): return now - timedelta(days=365 + random.randint(-15, 15))
     if any(x in time_str for x in ['seminggu', 'a week', '1 week']): return now - timedelta(days=7 + random.randint(-2, 2))
     if any(x in time_str for x in ['sehari', 'a day', '1 day']): return now - timedelta(days=1)
     if any(x in time_str for x in ['sejam', 'an hour', '1 hour']): return now 
     if any(x in time_str for x in ['baru saja', 'just now', 'minutes']): return now 
-
     num = re.findall(r'\d+', time_str)
     if not num: 
         return now
-
     num = int(num[0])
-
     if 'tahun' in time_str or 'year' in time_str: 
         return now - timedelta(days=(num*365) + random.randint(-30, 30))
     if 'bulan' in time_str or 'month' in time_str: 
@@ -171,7 +160,6 @@ def parse_gmaps_time(time_str):
         return now - timedelta(days=num)
     if 'jam' in time_str or 'hour' in time_str: 
         return now 
-
     return now
 
 @st.cache_data(ttl="1d") 
@@ -179,21 +167,16 @@ def load_data():
     file_path = os.path.join(DATA_PROCESSED, "final_dataset.csv")
     if not os.path.exists(file_path):
         return None
-
     df = pd.read_csv(file_path)
     df = df.rename(columns={'location': 'pelabuhan', 'text': 'review_text'})
-
     if 'rating' in df.columns:
         df['review_rating'] = df['rating'].astype(str).str.extract(r'(\d+)').astype(float)
-
     if 'time' in df.columns:
         df['tanggal'] = df['time'].apply(parse_gmaps_time)
         df['bulan_tahun'] = df['tanggal'].dt.to_period('M').astype(str)
-
     if 'final_text' in df.columns:
         extractor = AspectExtractor(method='rule-based')
         df = extractor.process_dataframe(df, text_column='final_text')
-
     return df
 
 @st.cache_resource
@@ -212,6 +195,9 @@ if df_full is None or df_full.empty:
     st.error("Data ulasan belum tersedia. Silakan jalankan script pengumpulan data terlebih dahulu.")
     st.stop()
 
+# ==========================================
+# SIDEBAR
+# ==========================================
 with st.sidebar:
     if logo_polibatam:
         if isinstance(logo_polibatam, PILImage.Image):
@@ -265,8 +251,26 @@ if start_date <= end_date:
 else:
     df_working = pd.DataFrame(columns=df_full.columns) 
 
-st.title("Dashboard Analisis Sentimen Pelabuhan")
-st.markdown("<p style='font-size: 16px; color: gray; margin-top:-15px;'>powered by Tim Analitik Polibatam</p>", unsafe_allow_html=True)
+# ==========================================
+# MAIN CONTENT AREA
+# ==========================================
+
+# LOGIKA TOMBOL TOGGLE SIDEBAR DI AREA UTAMA
+col_title, col_toggle = st.columns([5, 1])
+with col_title:
+    st.title("Dashboard Analisis Sentimen Pelabuhan")
+    st.markdown("<p style='font-size: 16px; color: gray; margin-top:-15px;'>powered by Tim Analitik Polibatam</p>", unsafe_allow_html=True)
+
+with col_toggle:
+    # Tombol toggle mengubah nilai session_state dan melakukan rerun
+    btn_label = "⏩ Tampilkan Sidebar" if st.session_state.sidebar_state == 'collapsed' else "⏪ Sembunyikan Sidebar"
+    if st.button(btn_label, use_container_width=True):
+        if st.session_state.sidebar_state == 'expanded':
+            st.session_state.sidebar_state = 'collapsed'
+        else:
+            st.session_state.sidebar_state = 'expanded'
+        st.rerun()
+
 st.markdown("---")
 
 if df_working.empty:
@@ -304,7 +308,6 @@ with tab1:
         pop_df = df_working['pelabuhan'].value_counts().reset_index()
         pop_df.columns = ['Pelabuhan', 'Jumlah Ulasan']
         
-        # MENGGUNAKAN PLOTLY UNTUK BAR CHART
         fig_pop = px.bar(
             pop_df, 
             x='Jumlah Ulasan', 
@@ -316,7 +319,6 @@ with tab1:
             labels={'Jumlah Ulasan': 'Total Ulasan (Volume)', 'Pelabuhan': ''}
         )
         
-        # Kustomisasi Hover Data
         fig_pop.update_traces(
             hovertemplate="<b>%{y}</b><br>Terdapat %{x} ulasan yang masuk di pelabuhan ini.<extra></extra>",
             textposition='outside'
@@ -343,18 +345,16 @@ with tab1:
                 Volume=('review_rating', 'count')
             ).reset_index()
 
-            # MENGGUNAKAN PLOTLY UNTUK SCATTER PLOT
             fig_scat = px.scatter(
                 scatter_df, 
                 x='Volume', 
                 y='Rata_Rating', 
                 color='pelabuhan', 
                 size='Volume',
-                size_max=30, # Mengatur ukuran maksimum bubble
+                size_max=30, 
                 labels={'Volume': 'Volume (Jumlah Ulasan)', 'Rata_Rating': 'Kualitas (Rata-rata Rating)', 'pelabuhan': 'Pelabuhan'}
             )
 
-            # Kustomisasi Hover Data
             fig_scat.update_traces(
                 hovertemplate="<b>%{customdata[0]}</b><br>Rata-rata Rating: %{y:.2f} Bintang<br>Total Ulasan: %{x}<extra></extra>",
                 customdata=scatter_df[['pelabuhan']]
@@ -380,7 +380,6 @@ with tab1:
         trend_df = df_working.groupby(['bulan_tahun', 'pelabuhan']).size().reset_index(name='Jumlah')
         trend_df = trend_df.sort_values('bulan_tahun')
 
-        # MENGGUNAKAN PLOTLY UNTUK LINE CHART
         fig_trend = px.line(
             trend_df, 
             x='bulan_tahun', 
@@ -391,7 +390,6 @@ with tab1:
             labels={'bulan_tahun': 'Periode (Bulan)', 'Jumlah': 'Volume Ulasan', 'pelabuhan': 'Pelabuhan'}
         )
 
-        # Kustomisasi Hover Data
         fig_trend.update_traces(
             hovertemplate="<b>%{customdata[0]}</b><br>Bulan: %{x}<br>Jumlah Ulasan: %{y}<extra></extra>",
             customdata=trend_df[['pelabuhan']]
@@ -400,7 +398,7 @@ with tab1:
         fig_trend.update_layout(
             height=400,
             plot_bgcolor='rgba(0,0,0,0)',
-            hovermode="x unified", # Menampilkan garis vertikal saat di-hover
+            hovermode="x unified", 
             yaxis=dict(showgrid=True, gridcolor='#EEEEEE'),
             xaxis=dict(showgrid=False, tickangle=-45),
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
@@ -564,7 +562,6 @@ with tab2:
     with col_wc:
         st.markdown("#### Visualisasi WordCloud")
         
-        # Memprioritaskan kolom wordcloud_text agar teks tidak ter-stemming
         if 'wordcloud_text' in df_working.columns:
             teks_kolom = 'wordcloud_text'
         elif 'final_text' in df_working.columns:
@@ -578,9 +575,6 @@ with tab2:
             semua_teks = " ".join(df_working[teks_kolom].dropna().astype(str))
 
             if semua_teks.strip(): 
-                # ==========================================
-                # PERBAIKAN 3: Custom Stopwords untuk WordCloud
-                # ==========================================
                 custom_stopwords = set([
                     'menjadi', 'kemudian', 'selama', 'untuk', 'utk', 'dari', 'pada', 'di', 'ke', 'dengan', 'dalam', 'yang', 'dan', 'atau', 'tapi',
                     'saya', 'kami', 'kita', 'mereka', 'orang', 'orang-orang',
@@ -594,7 +588,6 @@ with tab2:
                     'imigrasi', 'petugas', 'staf', 'bea cukai', 'porter', 'tiket', 'proses', 'sistem', 'renovasi', 'antrian', 'antrean', 'covid'
                 ])
 
-                # Parameter stopwords ditambahkan ke dalam WordCloud
                 wordcloud = WordCloud(
                     width=800, 
                     height=500, 
@@ -602,7 +595,7 @@ with tab2:
                     colormap='Blues',
                     collocations=True, 
                     min_word_length=3,
-                    stopwords=custom_stopwords # <--- Filter stopword diterapkan di sini
+                    stopwords=custom_stopwords 
                 ).generate(semua_teks)
                 
                 fig_wc, ax_wc = plt.subplots(figsize=(8, 5))
@@ -616,9 +609,6 @@ with tab2:
         else:
             st.info("Kolom teks tidak ditemukan untuk membuat WordCloud.")
 
-    # ----------------------------------------
-    # BAGIAN HEATMAP 
-    # ----------------------------------------
     with col_hm:
         st.markdown("#### Heatmap Keluhan Konsumen")
         if 'bulan_tahun' in df_working.columns and 'review_rating' in df_working.columns:
@@ -636,7 +626,6 @@ with tab2:
                 pivot_keluhan = pivot_keluhan.reindex(index=selected_ports, fill_value=0)
                 pivot_keluhan = pivot_keluhan.loc[:, (pivot_keluhan != 0).any(axis=0)]
 
-                # TAMPILAN DEFAULT HEATMAP (Lebih rapat)
                 fig_hm, ax_hm = plt.subplots(figsize=(14, 5)) 
                 sns.heatmap(pivot_keluhan, cmap='Reds', annot=True, fmt='d', 
                             linewidths=1, ax=ax_hm, annot_kws={"size": 10, "weight": "bold"})
@@ -644,7 +633,6 @@ with tab2:
                 ax_hm.set_xlabel("Periode (Bulan)", fontsize=11, fontweight='bold', labelpad=10)
                 ax_hm.set_ylabel("Terminal Feri", fontsize=11, fontweight='bold', labelpad=10)
 
-                # Set locator sumbu x ke jarak 3 bulan untuk layout standard
                 ax_hm.xaxis.set_major_locator(ticker.MultipleLocator(base=3))
                 plt.setp(ax_hm.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
                 plt.setp(ax_hm.get_yticklabels(), rotation=0)
@@ -652,9 +640,7 @@ with tab2:
                 sns.despine(left=True, bottom=True)
                 st.pyplot(fig_hm, use_container_width=True)
                 
-                # TOMBOL PERBESAR
                 if st.button("🔍 Perbesar Heatmap", key="hm_btn"):
-                    # Kirim data pivot ke pop-up agar digambar ulang
                     extra = {'pivot': pivot_keluhan, 'ports': selected_ports}
                     show_large_plot(fig=None, plot_type="heatmap_khusus", extra_data=extra)
             else:
@@ -764,12 +750,9 @@ else:
     with col_ins1:
         st.markdown("##### 📌 Temuan Aspek & Distribusi Keluhan")
         
-        # Fakta 1: Rasio Keluhan Terbesar per Pelabuhan
         if not df_negatif_insight.empty:
             keluhan_per_port = df_negatif_insight['pelabuhan'].value_counts()
             total_per_port = df_working['pelabuhan'].value_counts()
-            
-            # Hitung rasio persentase keluhan
             rasio_keluhan = (keluhan_per_port / total_per_port * 100).dropna().sort_values(ascending=False)
             port_terbanyak_komplain = keluhan_per_port.index[0]
             jml_komplain_max = keluhan_per_port.iloc[0]
@@ -781,7 +764,6 @@ else:
         else:
             st.write("- **Status Layanan:** Tidak ditemukan keluhan signifikan (Rating ≤ 2) pada filter data yang dipilih saat ini.")
 
-        # Fakta 2: Aspek yang Paling Sering Dikeluhkan & Lokasinya
         if 'aspects' in df_working.columns and not df_negatif_insight.empty:
             df_aspek_neg = df_negatif_insight.copy()
             if isinstance(df_aspek_neg['aspects'].iloc[0], list):
@@ -792,8 +774,6 @@ else:
             if not df_aspek_neg.empty:
                 top_aspect = df_aspek_neg['aspects'].value_counts().index[0]
                 top_aspect_count = df_aspek_neg['aspects'].value_counts().iloc[0]
-                
-                # Cari pelabuhan mana yang paling sering bermasalah di aspek tersebut
                 port_top_aspect = df_aspek_neg[df_aspek_neg['aspects'] == top_aspect]['pelabuhan'].value_counts().index[0]
                 port_top_aspect_count = df_aspek_neg[df_aspek_neg['aspects'] == top_aspect]['pelabuhan'].value_counts().iloc[0]
                 
@@ -802,7 +782,6 @@ else:
                     f"(muncul sebanyak **{top_aspect_count} kali**), dengan konsentrasi keluhan tertinggi berada di **{port_top_aspect}** ({port_top_aspect_count} ulasan)."
                 )
 
-        # Fakta 3: Totalitas Sentimen
         st.write(
             f"- **Statistik Keseluruhan:** Dari total **{len(df_working):,}** ulasan terfilter, terdapat **{len(df_negatif_insight):,} keluhan (Rating 1-2)**, "
             f"dengan rata-rata rating kepuasan konsumen berada di angka **{avg_rating:.2f} ⭐**."
@@ -811,9 +790,7 @@ else:
     with col_ins2:
         st.markdown("##### 💬 Contoh Ulasan Negatif Terbaru")
         if not df_negatif_insight.empty and 'review_text' in df_negatif_insight.columns:
-            # Ambil ulasan negatif terbaru
             df_sample_neg = df_negatif_insight.sort_values('tanggal', ascending=False).head(2)
-            
             for _, row in df_sample_neg.iterrows():
                 tgl_str = row['tanggal'].strftime('%d %b %Y') if pd.notna(row['tanggal']) else "-"
                 rating_val = int(row['review_rating']) if pd.notna(row['review_rating']) else 1
