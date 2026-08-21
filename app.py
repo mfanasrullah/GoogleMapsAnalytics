@@ -32,10 +32,11 @@ if 'sidebar_state' not in st.session_state:
     st.session_state.sidebar_state = 'expanded'
 
 # Set konfigurasi halaman menggunakan nilai dari session state
+# PERBAIKAN: Menghapus tanda pagar (#) agar state ini benar-benar diterapkan ke UI
 st.set_page_config(
     page_title="Dashboard Analisis Pelabuhan", 
     layout="wide", 
-    # initial_sidebar_state=st.session_state.sidebar_state
+    initial_sidebar_state=st.session_state.sidebar_state
 )
 
 responsive_css = """
