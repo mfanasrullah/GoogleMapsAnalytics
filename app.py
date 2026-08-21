@@ -338,6 +338,92 @@ with tab1:
         
         st.plotly_chart(fig_aspect, use_container_width=True)
 
+    # =====================================================================
+    # FITUR BARU: FILTER & TREN ASPEK DARI WAKTU KE WAKTU (PREDIKTIF)
+    # =====================================================================
+    st.markdown("---")
+    st.markdown("#### 📈 Tren Aspek dari Waktu ke Waktu (Analisis Prediktif)")
+    st.write("Pantau kapan suatu aspek sering dibicarakan untuk memprediksi potensi masalah di masa depan berdasarkan tren bulan-bulan sebelumnya.")
+
+    if 'aspects' in df_working.columns and 'bulan_tahun' in df_working.columns:
+        
+        # Persiapan data: Memastikan aspek difilter dengan baik
+        df_trend_base = df_working.copy()
+        
+        # Jika aspek berbentuk list di dalam dataframe, kita explode agar bisa dihitung per aspek
+        if not df_trend_base.empty and isinstance(df_trend_base['aspects'].iloc[0], list):
+            df_trend_base = df_trend_base.explode('aspects')
+            
+        unique_aspects = [asp for asp in df_trend_base['aspects'].unique() if pd.notna(asp) and str(asp).strip() != ""]
+        
+        if len(unique_aspects) > 0:
+            col_filter1, col_filter2 = st.columns([2, 1])
+            
+            with col_filter1:
+                # Filter untuk memilih Aspek
+                selected_trend_aspects = st.multiselect(
+                    "🔍 Filter Aspek (Bisa pilih lebih dari satu):",
+                    options=unique_aspects,
+                    default=unique_aspects[:3] if len(unique_aspects) >= 3 else unique_aspects
+                )
+            
+            with col_filter2:
+                # Filter untuk fokus pada Sentimen (Berguna untuk memprediksi Keluhan)
+                sentimen_fokus = st.radio(
+                    "🎯 Fokus Analisis:",
+                    ["Semua Ulasan", "Khusus Keluhan (Negatif)"],
+                    horizontal=False
+                )
+
+            if selected_trend_aspects:
+                # Memfilter data berdasarkan aspek yang dipilih
+                df_trend_aspect = df_trend_base[df_trend_base['aspects'].isin(selected_trend_aspects)]
+                
+                # Memfilter hanya keluhan jika dipilih (berdasarkan rating 1 dan 2)
+                if sentimen_fokus == "Khusus Keluhan (Negatif)" and 'review_rating' in df_trend_aspect.columns:
+                    df_trend_aspect = df_trend_aspect[df_trend_aspect['review_rating'] <= 2]
+
+                if not df_trend_aspect.empty:
+                    # Mengelompokkan data berdasarkan Bulan, Pelabuhan, dan Aspek
+                    trend_data = df_trend_aspect.groupby(['bulan_tahun', 'pelabuhan', 'aspects']).size().reset_index(name='Frekuensi')
+                    trend_data = trend_data.sort_values('bulan_tahun')
+
+                    # Membuat Line Chart Plotly
+                    fig_aspect_trend = px.line(
+                        trend_data,
+                        x='bulan_tahun',
+                        y='Frekuensi',
+                        color='aspects',
+                        facet_col='pelabuhan',
+                        facet_col_wrap=2,
+                        markers=True,
+                        line_shape='spline', # Membuat garis melengkung/halus
+                        labels={'bulan_tahun': 'Bulan', 'Frekuensi': 'Jumlah Kemunculan', 'aspects': 'Aspek'},
+                        title=f"Tren Kemunculan Aspek - {sentimen_fokus}"
+                    )
+
+                    # Mempercantik tampilan layout Plotly
+                    tinggi_grafik = max(400, math.ceil(df_trend_aspect['pelabuhan'].nunique() / 2) * 350)
+                    fig_aspect_trend.update_layout(
+                        height=tinggi_grafik,
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        hovermode="x unified", # Menyatukan tooltip saat di hover per bulan
+                        legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5)
+                    )
+                    
+                    fig_aspect_trend.update_xaxes(showgrid=False, tickangle=-45, title_text='')
+                    fig_aspect_trend.update_yaxes(showgrid=True, gridcolor='#EEEEEE', title_text='Jumlah')
+                    fig_aspect_trend.for_each_annotation(lambda a: a.update(text=f"<b>{a.text.split('=')[-1]}</b>"))
+
+                    st.plotly_chart(fig_aspect_trend, use_container_width=True)
+                else:
+                    st.info(f"Tidak ada data untuk aspek yang dipilih pada filter **{sentimen_fokus}** di rentang waktu ini.")
+            else:
+                st.warning("⚠️ Silakan pilih minimal satu aspek pada filter di atas.")
+        else:
+            st.warning("Data aspek belum diekstraksi. Pastikan model aspect extractor berjalan dengan benar.")
+
 with tab2:
     col_wc, col_hm = st.columns(2)
     
