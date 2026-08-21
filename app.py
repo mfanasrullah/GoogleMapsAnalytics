@@ -47,6 +47,20 @@ responsive_css = """
 """
 st.markdown(responsive_css, unsafe_allow_html=True)
 
+# ==========================================
+# FITUR BARU: FUNGSI POP-UP DIAGRAM BESAR
+# ==========================================
+@st.dialog("Tampilan Diagram Diperbesar", width="large")
+def show_large_plot(fig, plot_type="pyplot"):
+    """Menampilkan diagram dalam pop-up dialog yang besar"""
+    if plot_type == "pyplot":
+        st.pyplot(fig, use_container_width=True)
+    elif plot_type == "plotly":
+        # Memperbesar ukuran tinggi khusus untuk pop-up plotly
+        fig.update_layout(height=700)
+        st.plotly_chart(fig, use_container_width=True)
+# ==========================================
+
 @st.cache_resource
 def init_preprocessing_tools():
     stemmer_factory = StemmerFactory()
@@ -88,7 +102,6 @@ def parse_gmaps_time(time_str):
         
     time_str = str(time_str).lower()
     
-    # Pengacakan HARI saja agar tanggal tersebar (jam diabaikan karena akan disembunyikan)
     if any(x in time_str for x in ['sebulan', 'a month', '1 month']): return now - timedelta(days=30 + random.randint(-5, 5))
     if any(x in time_str for x in ['setahun', 'a year', '1 year']): return now - timedelta(days=365 + random.randint(-15, 15))
     if any(x in time_str for x in ['seminggu', 'a week', '1 week']): return now - timedelta(days=7 + random.randint(-2, 2))
@@ -251,6 +264,9 @@ with tab1:
         ax_pop.set_ylabel("", fontsize=10)
         sns.despine(left=True, bottom=True)
         st.pyplot(fig_pop, use_container_width=True)
+        # --- TOMBOL POP-UP DIAGRAM 1 ---
+        if st.button("🔍 Perbesar Diagram Popularitas", key="pop_btn"):
+            show_large_plot(fig_pop, "pyplot")
 
     with col2:
         st.markdown("#### Kualitas (Rating) vs Volume")
@@ -268,6 +284,9 @@ with tab1:
             ax_scat.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=8, title='Pelabuhan')
             sns.despine(left=True, bottom=True)
             st.pyplot(fig_scat, use_container_width=True)
+            # --- TOMBOL POP-UP DIAGRAM 2 ---
+            if st.button("🔍 Perbesar Diagram Kualitas", key="scat_btn"):
+                show_large_plot(fig_scat, "pyplot")
 
     st.markdown("---")
     
@@ -284,6 +303,9 @@ with tab1:
         ax_trend.grid(True, linestyle='--', alpha=0.6)
         sns.despine(left=True, bottom=True)
         st.pyplot(fig_trend, use_container_width=True)
+        # --- TOMBOL POP-UP DIAGRAM 3 ---
+        if st.button("🔍 Perbesar Tren Volume Ulasan", key="trend_btn"):
+            show_large_plot(fig_trend, "pyplot")
         
     st.markdown("---")
     
@@ -345,10 +367,10 @@ with tab1:
         fig_aspect.for_each_annotation(lambda a: a.update(text=f"<b>{a.text.split('=')[-1]}</b>", font=dict(size=14)))
         
         st.plotly_chart(fig_aspect, use_container_width=True)
+        # --- TOMBOL POP-UP DIAGRAM 4 ---
+        if st.button("🔍 Perbesar Grafik Aspek Keluhan", key="aspect_btn"):
+            show_large_plot(fig_aspect, "plotly")
 
-    # =====================================================================
-    # FITUR BARU: FILTER & TREN ASPEK DARI WAKTU KE WAKTU (PREDIKTIF)
-    # =====================================================================
     st.markdown("---")
     st.markdown("#### 📈 Tren Aspek dari Waktu ke Waktu (Analisis Prediktif)")
     st.write("Pantau kapan suatu aspek sering dibicarakan untuk memprediksi potensi masalah di masa depan berdasarkan tren bulan-bulan sebelumnya.")
@@ -425,6 +447,9 @@ with tab1:
                     fig_aspect_trend.for_each_annotation(lambda a: a.update(text=f"<b>{a.text.split('=')[-1]}</b>"))
 
                     st.plotly_chart(fig_aspect_trend, use_container_width=True)
+                    # --- TOMBOL POP-UP DIAGRAM 5 ---
+                    if st.button("🔍 Perbesar Grafik Tren Prediktif", key="trend_prediksi_btn"):
+                        show_large_plot(fig_aspect_trend, "plotly")
                 else:
                     st.info(f"Tidak ada data untuk aspek yang dipilih pada filter **{sentimen_fokus}** di rentang waktu ini.")
             else:
@@ -447,6 +472,9 @@ with tab2:
                 ax_wc.imshow(wordcloud, interpolation='bilinear')
                 ax_wc.axis('off')
                 st.pyplot(fig_wc, use_container_width=True)
+                # --- TOMBOL POP-UP DIAGRAM 6 ---
+                if st.button("🔍 Perbesar WordCloud", key="wc_btn"):
+                    show_large_plot(fig_wc, "pyplot")
             else:
                 st.info("Tidak ada data teks ulasan yang cukup untuk membuat WordCloud.")
 
@@ -464,10 +492,7 @@ with tab2:
                     fill_value=0
                 )
                 
-                # Memastikan semua pelabuhan yang di-filter muncul (walau keluhannya 0)
                 pivot_keluhan = pivot_keluhan.reindex(index=selected_ports, fill_value=0)
-                
-                # Memastikan heatmap HANYA menampilkan bulan-bulan yang memiliki minimal 1 keluhan
                 pivot_keluhan = pivot_keluhan.loc[:, (pivot_keluhan != 0).any(axis=0)]
                 
                 fig_hm, ax_hm = plt.subplots(figsize=(10, 6)) 
@@ -475,11 +500,13 @@ with tab2:
                 ax_hm.set_xlabel("Periode (Bulan)", fontsize=9)
                 ax_hm.set_ylabel("", fontsize=9)
                 
-                # Memiringkan label bulan 45 derajat
                 plt.setp(ax_hm.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
                 
                 sns.despine(left=True, bottom=True)
                 st.pyplot(fig_hm, use_container_width=True)
+                # --- TOMBOL POP-UP DIAGRAM 7 ---
+                if st.button("🔍 Perbesar Heatmap", key="hm_btn"):
+                    show_large_plot(fig_hm, "pyplot")
             else:
                 st.success("Luar biasa! Tidak ada ulasan negatif (Rating 1 & 2) yang ditemukan dalam rentang waktu terfilter.")
 
@@ -501,9 +528,7 @@ with tab3:
                         teks_terjemahan = user_input 
                         
                     teks_bersih = preprocess_text_svm(teks_terjemahan)
-                    
                     vektor_teks = tfidf_vectorizer.transform([teks_bersih])
-                    
                     raw_prediksi = svm_model.predict(vektor_teks)[0]
                     
                     if hasattr(svm_model, "predict_proba"):
@@ -558,7 +583,6 @@ with tab4:
     st.markdown("#### Confusion Matrix")
     st.info("Visualisasi ini menunjukan kemampuan model dalam membedakan setiap kelas (Positif, Netral, Negatif). Sumbu Y adalah kelas asli (Actual), dan Sumbu X adalah tebakan model (Predicted).")
     
-    # DATA CONFUSION MATRIX YANG SESUAI DENGAN EVALUASI RIIL (Total 486 data uji)
     data_cm = np.array([
         [38, 11, 12],
         [10, 23, 28],
@@ -571,6 +595,9 @@ with tab4:
     ax_cm.set_xlabel('Predicted Label')
     ax_cm.set_ylabel('True Label')
     st.pyplot(fig_cm)
+    # --- TOMBOL POP-UP DIAGRAM 8 ---
+    if st.button("🔍 Perbesar Confusion Matrix", key="cm_btn"):
+        show_large_plot(fig_cm, "pyplot")
 
 st.markdown("---")
 st.subheader("💡 Insights & Rekomendasi ")
@@ -588,7 +615,6 @@ with st.expander("Lihat Data Ulasan Mentah (Tabel)"):
     
     df_tabel = df_working[available_cols].copy()
     if 'tanggal' in df_tabel.columns:
-        # Mengubah format menjadi YYYY-MM-DD saja tanpa jam
         df_tabel['tanggal'] = df_tabel['tanggal'].dt.strftime('%Y-%m-%d')
         
     st.dataframe(df_tabel, use_container_width=True)
