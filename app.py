@@ -12,7 +12,7 @@ from deep_translator import GoogleTranslator
 import math
 import joblib
 import numpy as np
-import random  # Ditambahkan untuk mengacak tanggal dan jam (jitter)
+import random 
 
 from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
 from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory
@@ -80,46 +80,40 @@ def load_logo():
 
 logo_polibatam = load_logo()
 
-# =====================================================================
-# FUNGSI PERBAIKAN: Menambahkan pengacakan waktu agar tidak kembar
-# =====================================================================
 def parse_gmaps_time(time_str):
     now = datetime.now()
     
-    # Beri jam dan menit acak agar tidak kembar persis
-    random_time_offset = timedelta(hours=random.randint(0, 23), minutes=random.randint(0, 59))
-    
     if pd.isna(time_str) or str(time_str).strip() == "": 
-        return now - random_time_offset
+        return now
         
     time_str = str(time_str).lower()
     
-    # Pengacakan hari agar tersebar di rentang waktu tersebut (jitter)
-    if any(x in time_str for x in ['sebulan', 'a month', '1 month']): return now - timedelta(days=30 + random.randint(-5, 5)) - random_time_offset
-    if any(x in time_str for x in ['setahun', 'a year', '1 year']): return now - timedelta(days=365 + random.randint(-15, 15)) - random_time_offset
-    if any(x in time_str for x in ['seminggu', 'a week', '1 week']): return now - timedelta(days=7 + random.randint(-2, 2)) - random_time_offset
-    if any(x in time_str for x in ['sehari', 'a day', '1 day']): return now - timedelta(days=1) - random_time_offset
-    if any(x in time_str for x in ['sejam', 'an hour', '1 hour']): return now - timedelta(hours=1, minutes=random.randint(0, 30))
-    if any(x in time_str for x in ['baru saja', 'just now', 'minutes']): return now - timedelta(minutes=random.randint(1, 10))
+    # Pengacakan HARI saja agar tanggal tersebar (jam diabaikan karena akan disembunyikan)
+    if any(x in time_str for x in ['sebulan', 'a month', '1 month']): return now - timedelta(days=30 + random.randint(-5, 5))
+    if any(x in time_str for x in ['setahun', 'a year', '1 year']): return now - timedelta(days=365 + random.randint(-15, 15))
+    if any(x in time_str for x in ['seminggu', 'a week', '1 week']): return now - timedelta(days=7 + random.randint(-2, 2))
+    if any(x in time_str for x in ['sehari', 'a day', '1 day']): return now - timedelta(days=1)
+    if any(x in time_str for x in ['sejam', 'an hour', '1 hour']): return now 
+    if any(x in time_str for x in ['baru saja', 'just now', 'minutes']): return now 
     
     num = re.findall(r'\d+', time_str)
     if not num: 
-        return now - random_time_offset
+        return now
         
     num = int(num[0])
     
     if 'tahun' in time_str or 'year' in time_str: 
-        return now - timedelta(days=(num*365) + random.randint(-30, 30)) - random_time_offset
+        return now - timedelta(days=(num*365) + random.randint(-30, 30))
     if 'bulan' in time_str or 'month' in time_str: 
-        return now - timedelta(days=(num*30) + random.randint(-5, 5)) - random_time_offset
+        return now - timedelta(days=(num*30) + random.randint(-5, 5))
     if 'minggu' in time_str or 'week' in time_str: 
-        return now - timedelta(days=(num*7) + random.randint(-2, 2)) - random_time_offset
+        return now - timedelta(days=(num*7) + random.randint(-2, 2))
     if 'hari' in time_str or 'day' in time_str: 
-        return now - timedelta(days=num) - random_time_offset
+        return now - timedelta(days=num)
     if 'jam' in time_str or 'hour' in time_str: 
-        return now - timedelta(hours=num, minutes=random.randint(0, 59))
+        return now 
     
-    return now - random_time_offset
+    return now
 
 @st.cache_data(ttl="1d") 
 def load_data():
@@ -594,5 +588,13 @@ with st.expander("Lihat Data Ulasan Mentah (Tabel)"):
     
     if 'aspects' in df_working.columns:
         available_cols.append('aspects')
+    
+    # =========================================================================
+    # FITUR PERBAIKAN: Menghilangkan Jam pada tampilan tabel
+    # =========================================================================
+    df_tabel = df_working[available_cols].copy()
+    if 'tanggal' in df_tabel.columns:
+        # Mengubah format menjadi YYYY-MM-DD saja tanpa jam
+        df_tabel['tanggal'] = df_tabel['tanggal'].dt.strftime('%Y-%m-%d')
         
-    st.dataframe(df_working[available_cols], use_container_width=True)
+    st.dataframe(df_tabel, use_container_width=True)
