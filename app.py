@@ -13,6 +13,7 @@ import math
 import joblib
 import numpy as np
 import random 
+import matplotlib.ticker as ticker # Tambahan untuk mengatur kerapatan sumbu
 
 from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
 from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory
@@ -452,6 +453,7 @@ with tab1:
         else:
             st.warning("Data aspek belum diekstraksi. Pastikan model aspect extractor berjalan dengan benar.")
 
+
 # ==========================================
 # PERBAIKAN: TAB 2 - WORDCLOUD & HEATMAP
 # ==========================================
@@ -461,7 +463,7 @@ with tab2:
     with col_wc:
         st.markdown("#### Visualisasi WordCloud")
         
-        # PERBAIKAN: Memprioritaskan kolom wordcloud_text agar teks tidak ter-stemming (distorsi makna)
+        # Memprioritaskan kolom wordcloud_text agar teks tidak ter-stemming
         if 'wordcloud_text' in df_working.columns:
             teks_kolom = 'wordcloud_text'
         elif 'final_text' in df_working.columns:
@@ -475,7 +477,7 @@ with tab2:
             semua_teks = " ".join(df_working[teks_kolom].dropna().astype(str))
 
             if semua_teks.strip(): 
-                # PERBAIKAN: collocations=True diaktifkan untuk menangkap N-grams (frasa 2 kata)
+                # collocations=True diaktifkan untuk menangkap N-grams
                 wordcloud = WordCloud(
                     width=800, 
                     height=500, 
@@ -496,6 +498,9 @@ with tab2:
         else:
             st.info("Kolom teks tidak ditemukan untuk membuat WordCloud.")
 
+    # ----------------------------------------
+    # UPDATE HEATMAP DIMULAI DI SINI
+    # ----------------------------------------
     with col_hm:
         st.markdown("#### Heatmap Keluhan Konsumen")
         if 'bulan_tahun' in df_working.columns and 'review_rating' in df_working.columns:
@@ -513,19 +518,35 @@ with tab2:
                 pivot_keluhan = pivot_keluhan.reindex(index=selected_ports, fill_value=0)
                 pivot_keluhan = pivot_keluhan.loc[:, (pivot_keluhan != 0).any(axis=0)]
 
-                fig_hm, ax_hm = plt.subplots(figsize=(10, 6)) 
-                sns.heatmap(pivot_keluhan, cmap='Reds', annot=True, fmt='d', linewidths=.5, ax=ax_hm, annot_kws={"size": 10})
-                ax_hm.set_xlabel("Periode (Bulan)", fontsize=9)
-                ax_hm.set_ylabel("", fontsize=9)
+                # PERBAIKAN 1 & 3: Melebarkan ukuran plot (figsize diperbesar horizontalnya)
+                # agar aspect ratio sel menjadi lebih kotak/proporsional
+                fig_hm, ax_hm = plt.subplots(figsize=(14, 5)) 
+
+                # PERBAIKAN 2: Menggunakan annot_kws={"weight": "bold"} dan membiarkan 
+                # seaborn yang menangani auto-color contrast teks di dalam box
+                sns.heatmap(pivot_keluhan, cmap='Reds', annot=True, fmt='d', 
+                            linewidths=1, ax=ax_hm, annot_kws={"size": 10, "weight": "bold"})
+                
+                # PERBAIKAN 4: Melengkapi label dan memperbaiki hierarki font
+                ax_hm.set_xlabel("Periode (Bulan)", fontsize=11, fontweight='bold', labelpad=10)
+                ax_hm.set_ylabel("Terminal Feri", fontsize=11, fontweight='bold', labelpad=10)
+
+                # PERBAIKAN 1 (Lanjutan): Mengurangi kerapatan label sumbu X (tampil tiap 3 bulan)
+                ax_hm.xaxis.set_major_locator(ticker.MultipleLocator(base=3))
 
                 plt.setp(ax_hm.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
+                plt.setp(ax_hm.get_yticklabels(), rotation=0)
 
                 sns.despine(left=True, bottom=True)
                 st.pyplot(fig_hm, use_container_width=True)
+                
                 if st.button("🔍 Perbesar Heatmap", key="hm_btn"):
                     show_large_plot(fig_hm, "pyplot")
             else:
                 st.success("Luar biasa! Tidak ada ulasan negatif (Rating 1 & 2) yang ditemukan dalam rentang waktu terfilter.")
+    # ----------------------------------------
+    # UPDATE HEATMAP BERAKHIR DI SINI
+    # ----------------------------------------
 
 with tab3:
     st.header("Sistem Uji Sentimen Real-Time")
