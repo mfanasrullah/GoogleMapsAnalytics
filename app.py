@@ -381,7 +381,7 @@ with tab2:
 
 with tab3:
     st.header("Sistem Uji Sentimen Real-Time")
-    st.markdown("Ketik ulasan di bawah ini untuk melihat bagaimana **Support Vector Machine (SVM) dan TF-IDF** memprediksi sentimen teks secara instan berdasarkan data latih pelabuhan.")
+    st.markdown("Ketik ulasan di bawah ini untuk melihat bagaimana **Support Vector Machine (SVM) dan TF-IDF** memprediksi sentimen teks secara instan berdasarkan data latih.")
     
     if svm_model is None or tfidf_vectorizer is None:
         st.error("⚠️ Model SVM (`svm_model.pkl`) atau TF-IDF Vectorizer (`tfidf_vectorizer.pkl`) belum tersedia di folder `data/models/`. Silakan jalankan script pelatihan model terlebih dahulu.")
