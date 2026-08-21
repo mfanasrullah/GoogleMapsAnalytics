@@ -20,7 +20,7 @@ from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
 from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory, StopWordRemover, ArrayDictionary
 
 from config import DATA_PROCESSED
-from recommendation.insight import generate_insights
+# recommendation.insight tidak lagi wajib jika digantikan logika dinamis
 from aspect.aspect import AspectExtractor
 from aspect.summary import AspectSummarizer
 
@@ -688,12 +688,89 @@ with tab4:
     if st.button("🔍 Perbesar Confusion Matrix", key="cm_btn"):
         show_large_plot(fig_cm, "pyplot")
 
+# ==========================================
+# PEMBARUAN: INSIGHT BERBASIS FAKTA DATA REAL-TIME
+# ==========================================
 st.markdown("---")
-st.subheader("💡 Insights & Rekomendasi ")
-if 'sentiment' in df_working.columns:
-    insights = generate_insights(df_working)
-    for i, insight in enumerate(insights, 1):
-        st.info(f"**{i}.** {insight}")
+st.subheader("💡 Ringkasan Fakta & Analisis Data Terfilter")
+
+df_negatif_insight = df_working[df_working['review_rating'] <= 2] if 'review_rating' in df_working.columns else pd.DataFrame()
+
+if df_working.empty:
+    st.info("Pilih pelabuhan dan rentang waktu untuk melihat ringkasan fakta data.")
+else:
+    col_ins1, col_ins2 = st.columns([3, 2])
+
+    with col_ins1:
+        st.markdown("##### 📌 Temuan Aspek & Distribusi Keluhan")
+        
+        # Fakta 1: Rasio Keluhan Terbesar per Pelabuhan
+        if not df_negatif_insight.empty:
+            keluhan_per_port = df_negatif_insight['pelabuhan'].value_counts()
+            total_per_port = df_working['pelabuhan'].value_counts()
+            
+            # Hitung rasio persentase keluhan
+            rasio_keluhan = (keluhan_per_port / total_per_port * 100).dropna().sort_values(ascending=False)
+            port_terbanyak_komplain = keluhan_per_port.index[0]
+            jml_komplain_max = keluhan_per_port.iloc[0]
+            
+            st.write(
+                f"- **Volume Keluhan Tertinggi:** Pelabuhan **{port_terbanyak_komplain}** mencatatkan keluhan terbanyak yaitu **{jml_komplain_max} ulasan negatif** "
+                f"(sekitar {rasio_keluhan.get(port_terbanyak_komplain, 0):.1f}% dari total ulasan di pelabuhan tersebut pada periode yang dipilih)."
+            )
+        else:
+            st.write("- **Status Layanan:** Tidak ditemukan keluhan signifikan (Rating ≤ 2) pada filter data yang dipilih saat ini.")
+
+        # Fakta 2: Aspek yang Paling Sering Dikeluhkan & Lokasinya
+        if 'aspects' in df_working.columns and not df_negatif_insight.empty:
+            df_aspek_neg = df_negatif_insight.copy()
+            if isinstance(df_aspek_neg['aspects'].iloc[0], list):
+                df_aspek_neg = df_aspek_neg.explode('aspects')
+            
+            df_aspek_neg = df_aspek_neg[df_aspek_neg['aspects'].notna() & (df_aspek_neg['aspects'] != "")]
+            
+            if not df_aspek_neg.empty:
+                top_aspect = df_aspek_neg['aspects'].value_counts().index[0]
+                top_aspect_count = df_aspek_neg['aspects'].value_counts().iloc[0]
+                
+                # Cari pelabuhan mana yang paling sering bermasalah di aspek tersebut
+                port_top_aspect = df_aspek_neg[df_aspek_neg['aspects'] == top_aspect]['pelabuhan'].value_counts().index[0]
+                port_top_aspect_count = df_aspek_neg[df_aspek_neg['aspects'] == top_aspect]['pelabuhan'].value_counts().iloc[0]
+                
+                st.write(
+                    f"- **Aspek Masalah Utama:** Aspek **'{top_aspect}'** adalah isu yang paling sering dikeluhkan oleh konsumen "
+                    f"(muncul sebanyak **{top_aspect_count} kali**), dengan konsentrasi keluhan tertinggi berada di **{port_top_aspect}** ({port_top_aspect_count} ulasan)."
+                )
+
+        # Fakta 3: Totalitas Sentimen
+        st.write(
+            f"- **Statistik Keseluruhan:** Dari total **{len(df_working):,}** ulasan terfilter, terdapat **{len(df_negatif_insight):,} keluhan (Rating 1-2)**, "
+            f"dengan rata-rata rating kepuasan konsumen berada di angka **{avg_rating:.2f} ⭐**."
+        )
+
+    with col_ins2:
+        st.markdown("##### 💬 Contoh Ulasan Negatif Terbaru")
+        if not df_negatif_insight.empty and 'review_text' in df_negatif_insight.columns:
+            # Ambil ulasan negatif terbaru
+            df_sample_neg = df_negatif_insight.sort_values('tanggal', ascending=False).head(2)
+            
+            for _, row in df_sample_neg.iterrows():
+                tgl_str = row['tanggal'].strftime('%d %b %Y') if pd.notna(row['tanggal']) else "-"
+                rating_val = int(row['review_rating']) if pd.notna(row['review_rating']) else 1
+                
+                st.markdown(
+                    f"""
+                    <div style="background-color: rgba(255, 75, 75, 0.08); border-left: 4px solid #E53935; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
+                        <small style="color: #666;"><b>{row['pelabuhan']}</b> • {tgl_str} • {'⭐'*rating_val}</small><br>
+                        <span style="font-size: 13px; font-style: italic;">"{row['review_text']}"</span>
+                    </div>
+                    """, 
+                    unsafe_allow_html=True
+                )
+        else:
+            st.info("Tidak ada sampel keluhan terbaru pada filter yang aktif.")
+
+st.markdown("---")
 
 with st.expander("Lihat Data Ulasan Mentah (Tabel)"):
     cols_to_show = ['pelabuhan', 'tanggal', 'review_text', 'review_rating']
