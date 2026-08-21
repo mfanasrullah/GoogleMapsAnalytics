@@ -347,10 +347,8 @@ with tab1:
 
     if 'aspects' in df_working.columns and 'bulan_tahun' in df_working.columns:
         
-        # Persiapan data: Memastikan aspek difilter dengan baik
         df_trend_base = df_working.copy()
         
-        # Jika aspek berbentuk list di dalam dataframe, kita explode agar bisa dihitung per aspek
         if not df_trend_base.empty and isinstance(df_trend_base['aspects'].iloc[0], list):
             df_trend_base = df_trend_base.explode('aspects')
             
@@ -360,7 +358,6 @@ with tab1:
             col_filter1, col_filter2 = st.columns([2, 1])
             
             with col_filter1:
-                # Filter untuk memilih Aspek
                 selected_trend_aspects = st.multiselect(
                     "🔍 Filter Aspek (Bisa pilih lebih dari satu):",
                     options=unique_aspects,
@@ -368,7 +365,6 @@ with tab1:
                 )
             
             with col_filter2:
-                # Filter untuk fokus pada Sentimen (Berguna untuk memprediksi Keluhan)
                 sentimen_fokus = st.radio(
                     "🎯 Fokus Analisis:",
                     ["Semua Ulasan", "Khusus Keluhan (Negatif)"],
@@ -376,22 +372,17 @@ with tab1:
                 )
 
             if selected_trend_aspects:
-                # Memfilter data berdasarkan aspek yang dipilih
                 df_trend_aspect = df_trend_base[df_trend_base['aspects'].isin(selected_trend_aspects)]
                 
-                # Memfilter hanya keluhan jika dipilih (berdasarkan rating 1 dan 2)
                 if sentimen_fokus == "Khusus Keluhan (Negatif)" and 'review_rating' in df_trend_aspect.columns:
                     df_trend_aspect = df_trend_aspect[df_trend_aspect['review_rating'] <= 2]
 
                 if not df_trend_aspect.empty:
-                    # Mengelompokkan data berdasarkan Bulan, Pelabuhan, dan Aspek
                     trend_data = df_trend_aspect.groupby(['bulan_tahun', 'pelabuhan', 'aspects']).size().reset_index(name='Frekuensi')
                     trend_data = trend_data.sort_values('bulan_tahun')
 
-                    # Tampilkan keterangan fokus sentimen di luar grafik (pakai Streamlit) agar lebih rapi
                     st.markdown(f"<p style='text-align: center; color: gray;'>Data yang ditampilkan: <b>{sentimen_fokus}</b></p>", unsafe_allow_html=True)
 
-                    # Membuat Line Chart Plotly
                     fig_aspect_trend = px.line(
                         trend_data,
                         x='bulan_tahun',
@@ -400,25 +391,24 @@ with tab1:
                         facet_col='pelabuhan',
                         facet_col_wrap=2,
                         markers=True,
-                        line_shape='spline', # Membuat garis melengkung/halus
+                        line_shape='spline', 
                         labels={'bulan_tahun': 'Bulan', 'Frekuensi': 'Jumlah Kemunculan'}
                     )
 
-                    # Mempercantik tampilan layout Plotly
                     tinggi_grafik = max(400, math.ceil(df_trend_aspect['pelabuhan'].nunique() / 2) * 350)
                     fig_aspect_trend.update_layout(
                         height=tinggi_grafik,
                         plot_bgcolor='rgba(0,0,0,0)',
                         paper_bgcolor='rgba(0,0,0,0)',
-                        hovermode="x unified", # Menyatukan tooltip saat di hover per bulan
-                        margin=dict(t=40, b=100), # Beri ruang lebih di atas dan bawah
+                        hovermode="x unified",
+                        margin=dict(t=40, b=100), 
                         legend=dict(
                             orientation="h", 
                             yanchor="top",
-                            y=-0.15,           # Posisi di bawah grafik
+                            y=-0.15,
                             xanchor="center", 
                             x=0.5,
-                            title_text=""      # Menghilangkan teks "Aspek"
+                            title_text=""
                         )
                     )
                     
@@ -466,10 +456,28 @@ with tab2:
                     fill_value=0
                 )
                 
-                fig_hm, ax_hm = plt.subplots(figsize=(8, 6))
+                # =========================================================================
+                # FITUR PERBAIKAN: Memaksa heatmap menampilkan SELURUH BULAN dari rentang tanggal
+                # yang dipilih pada sidebar, sehingga grafik tidak menciut menjadi 1 bulan saja.
+                # =========================================================================
+                
+                # Membuat list bulan dari start_date sampai end_date
+                all_months_in_range = pd.period_range(start=start_date, end=end_date, freq='M').astype(str).tolist()
+                
+                # Reindex kolom (bulan) dengan isi 0 untuk bulan yang kosong keluhannya
+                pivot_keluhan = pivot_keluhan.reindex(columns=all_months_in_range, fill_value=0)
+                
+                # Opsional: Memaksa tampilnya seluruh pelabuhan yang dipilih, meskipun 0 keluhan
+                pivot_keluhan = pivot_keluhan.reindex(index=selected_ports, fill_value=0)
+                
+                fig_hm, ax_hm = plt.subplots(figsize=(10, 6)) # Dibuat lebih lebar agar muat banyak bulan
                 sns.heatmap(pivot_keluhan, cmap='Reds', annot=True, fmt='d', linewidths=.5, ax=ax_hm, annot_kws={"size": 10})
                 ax_hm.set_xlabel("Periode (Bulan)", fontsize=9)
                 ax_hm.set_ylabel("", fontsize=9)
+                
+                # Memiringkan label bulan 45 derajat agar tidak bertabrakan saat dirender
+                plt.setp(ax_hm.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
+                
                 sns.despine(left=True, bottom=True)
                 st.pyplot(fig_hm, use_container_width=True)
             else:
