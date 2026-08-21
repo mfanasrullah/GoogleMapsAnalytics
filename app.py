@@ -48,7 +48,7 @@ responsive_css = """
 st.markdown(responsive_css, unsafe_allow_html=True)
 
 # ==========================================
-# FITUR BARU: FUNGSI POP-UP DIAGRAM BESAR
+# FITUR: FUNGSI POP-UP DIAGRAM BESAR
 # ==========================================
 @st.dialog("Tampilan Diagram Diperbesar", width="large")
 def show_large_plot(fig, plot_type="pyplot"):
@@ -56,7 +56,6 @@ def show_large_plot(fig, plot_type="pyplot"):
     if plot_type == "pyplot":
         st.pyplot(fig, use_container_width=True)
     elif plot_type == "plotly":
-        # Memperbesar ukuran tinggi khusus untuk pop-up plotly
         fig.update_layout(height=700)
         st.plotly_chart(fig, use_container_width=True)
 # ==========================================
@@ -96,10 +95,7 @@ logo_polibatam = load_logo()
 
 def parse_gmaps_time(time_str):
     now = datetime.now()
-    
-    if pd.isna(time_str) or str(time_str).strip() == "": 
-        return now
-        
+    if pd.isna(time_str) or str(time_str).strip() == "": return now
     time_str = str(time_str).lower()
     
     if any(x in time_str for x in ['sebulan', 'a month', '1 month']): return now - timedelta(days=30 + random.randint(-5, 5))
@@ -110,22 +106,14 @@ def parse_gmaps_time(time_str):
     if any(x in time_str for x in ['baru saja', 'just now', 'minutes']): return now 
     
     num = re.findall(r'\d+', time_str)
-    if not num: 
-        return now
-        
+    if not num: return now
     num = int(num[0])
     
-    if 'tahun' in time_str or 'year' in time_str: 
-        return now - timedelta(days=(num*365) + random.randint(-30, 30))
-    if 'bulan' in time_str or 'month' in time_str: 
-        return now - timedelta(days=(num*30) + random.randint(-5, 5))
-    if 'minggu' in time_str or 'week' in time_str: 
-        return now - timedelta(days=(num*7) + random.randint(-2, 2))
-    if 'hari' in time_str or 'day' in time_str: 
-        return now - timedelta(days=num)
-    if 'jam' in time_str or 'hour' in time_str: 
-        return now 
-    
+    if 'tahun' in time_str or 'year' in time_str: return now - timedelta(days=(num*365) + random.randint(-30, 30))
+    if 'bulan' in time_str or 'month' in time_str: return now - timedelta(days=(num*30) + random.randint(-5, 5))
+    if 'minggu' in time_str or 'week' in time_str: return now - timedelta(days=(num*7) + random.randint(-2, 2))
+    if 'hari' in time_str or 'day' in time_str: return now - timedelta(days=num)
+    if 'jam' in time_str or 'hour' in time_str: return now 
     return now
 
 @st.cache_data(ttl="1d") 
@@ -243,11 +231,15 @@ with kpi_col3:
 
 st.markdown("---")
 
-tab1, tab2, tab3, tab4 = st.tabs([
+# ========================================================
+# PENAMBAHAN TAB 5 UNTUK PREDIKSI MASALAH (EARLY WARNING)
+# ========================================================
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "📊 Visualisasi Data", 
     "☁️ WordCloud & Heatmap", 
     "🤖 Prediksi Sentimen (SVM)",
-    "📈 Evaluasi Model"
+    "📈 Evaluasi Model",
+    "🔮 Early Warning (Prediksi Masalah)"
 ])
 
 with tab1:
@@ -264,7 +256,6 @@ with tab1:
         ax_pop.set_ylabel("", fontsize=10)
         sns.despine(left=True, bottom=True)
         st.pyplot(fig_pop, use_container_width=True)
-        # --- TOMBOL POP-UP DIAGRAM 1 ---
         if st.button("🔍 Perbesar Diagram Popularitas", key="pop_btn"):
             show_large_plot(fig_pop, "pyplot")
 
@@ -284,7 +275,6 @@ with tab1:
             ax_scat.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=8, title='Pelabuhan')
             sns.despine(left=True, bottom=True)
             st.pyplot(fig_scat, use_container_width=True)
-            # --- TOMBOL POP-UP DIAGRAM 2 ---
             if st.button("🔍 Perbesar Diagram Kualitas", key="scat_btn"):
                 show_large_plot(fig_scat, "pyplot")
 
@@ -303,7 +293,6 @@ with tab1:
         ax_trend.grid(True, linestyle='--', alpha=0.6)
         sns.despine(left=True, bottom=True)
         st.pyplot(fig_trend, use_container_width=True)
-        # --- TOMBOL POP-UP DIAGRAM 3 ---
         if st.button("🔍 Perbesar Tren Volume Ulasan", key="trend_btn"):
             show_large_plot(fig_trend, "pyplot")
         
@@ -367,7 +356,6 @@ with tab1:
         fig_aspect.for_each_annotation(lambda a: a.update(text=f"<b>{a.text.split('=')[-1]}</b>", font=dict(size=14)))
         
         st.plotly_chart(fig_aspect, use_container_width=True)
-        # --- TOMBOL POP-UP DIAGRAM 4 ---
         if st.button("🔍 Perbesar Grafik Aspek Keluhan", key="aspect_btn"):
             show_large_plot(fig_aspect, "plotly")
 
@@ -379,7 +367,7 @@ with tab1:
         
         df_trend_base = df_working.copy()
         
-        if not df_trend_base.empty and isinstance(df_trend_base['aspects'].iloc[0], list):
+        if not df_trend_base.empty and pd.notna(df_trend_base['aspects'].iloc[0]) and isinstance(df_trend_base['aspects'].iloc[0], list):
             df_trend_base = df_trend_base.explode('aspects')
             
         unique_aspects = [asp for asp in df_trend_base['aspects'].unique() if pd.notna(asp) and str(asp).strip() != ""]
@@ -447,7 +435,6 @@ with tab1:
                     fig_aspect_trend.for_each_annotation(lambda a: a.update(text=f"<b>{a.text.split('=')[-1]}</b>"))
 
                     st.plotly_chart(fig_aspect_trend, use_container_width=True)
-                    # --- TOMBOL POP-UP DIAGRAM 5 ---
                     if st.button("🔍 Perbesar Grafik Tren Prediktif", key="trend_prediksi_btn"):
                         show_large_plot(fig_aspect_trend, "plotly")
                 else:
@@ -472,7 +459,6 @@ with tab2:
                 ax_wc.imshow(wordcloud, interpolation='bilinear')
                 ax_wc.axis('off')
                 st.pyplot(fig_wc, use_container_width=True)
-                # --- TOMBOL POP-UP DIAGRAM 6 ---
                 if st.button("🔍 Perbesar WordCloud", key="wc_btn"):
                     show_large_plot(fig_wc, "pyplot")
             else:
@@ -504,7 +490,6 @@ with tab2:
                 
                 sns.despine(left=True, bottom=True)
                 st.pyplot(fig_hm, use_container_width=True)
-                # --- TOMBOL POP-UP DIAGRAM 7 ---
                 if st.button("🔍 Perbesar Heatmap", key="hm_btn"):
                     show_large_plot(fig_hm, "pyplot")
             else:
@@ -595,12 +580,124 @@ with tab4:
     ax_cm.set_xlabel('Predicted Label')
     ax_cm.set_ylabel('True Label')
     st.pyplot(fig_cm)
-    # --- TOMBOL POP-UP DIAGRAM 8 ---
     if st.button("🔍 Perbesar Confusion Matrix", key="cm_btn"):
         show_large_plot(fig_cm, "pyplot")
 
+# ========================================================
+# KODE UNTUK TAB 5: EARLY WARNING SYSTEM (PREDIKSI MASALAH)
+# ========================================================
+with tab5:
+    st.header("🔮 Peringatan Dini & Prediksi Masalah")
+    st.markdown("""
+    Fitur **Early Warning System (EWS)** ini menggunakan algoritma **Regresi Linear (Linear Regression)** untuk membaca tren volume keluhan (sentimen negatif) dari bulan-bulan sebelumnya. 
+    Sistem secara otomatis mendeteksi aspek mana yang memiliki kurva menanjak (gradien/slope positif) sehingga pengelola dapat mengambil tindakan preventif sebelum masalah tersebut melonjak di bulan berikutnya.
+    """)
+    
+    if 'aspects' in df_working.columns and 'bulan_tahun' in df_working.columns and 'review_rating' in df_working.columns:
+        # Filter HANYA ulasan negatif (Rating 1 dan 2)
+        df_problems = df_working[df_working['review_rating'] <= 2].copy()
+        
+        # Unpack aspek dari dalam list agar bisa dihitung per baris
+        df_problems = df_problems.dropna(subset=['aspects'])
+        if not df_problems.empty and pd.notna(df_problems['aspects'].iloc[0]) and isinstance(df_problems['aspects'].iloc[0], list):
+            df_problems = df_problems.explode('aspects')
+            
+        df_problems = df_problems[df_problems['aspects'].astype(str).str.strip() != ""]
+        
+        if not df_problems.empty:
+            # Mengelompokan jumlah keluhan berdasarkan Bulan dan Aspek
+            trend_keluhan = df_problems.groupby(['bulan_tahun', 'aspects']).size().reset_index(name='jumlah')
+            daftar_bulan = sorted(trend_keluhan['bulan_tahun'].unique())
+            
+            # Sistem butuh data setidaknya 3 bulan agar tren regresi linear valid dan logis
+            if len(daftar_bulan) >= 3:
+                hasil_prediksi = []
+                
+                for asp in df_problems['aspects'].unique():
+                    data_asp = trend_keluhan[trend_keluhan['aspects'] == asp]
+                    
+                    # Bangun matrix deret waktu (Time-Series) untuk aspek ini
+                    y_values = []
+                    for bln in daftar_bulan:
+                        val = data_asp[data_asp['bulan_tahun'] == bln]['jumlah'].values
+                        y_values.append(val[0] if len(val) > 0 else 0)
+                        
+                    x_values = np.arange(len(daftar_bulan))
+                    
+                    # Hitung Slope (Kemiringan Garis) menggunakan Numpy Polyfit
+                    if sum(y_values) > 0:
+                        slope, intercept = np.polyfit(x_values, y_values, 1)
+                        # Prediksi volume untuk bulan ke (N+1)
+                        prediksi_bulan_depan = int(slope * len(daftar_bulan) + intercept)
+                        prediksi_bulan_depan = max(0, prediksi_bulan_depan) # Tidak mungkin minus
+                        
+                        if slope > 0.5:
+                            status_badge = "🔴 Kritis (Meningkat Cepat)"
+                        elif slope > 0:
+                            status_badge = "🟡 Waspada (Sedikit Naik)"
+                        else:
+                            status_badge = "🟢 Aman (Stabil / Menurun)"
+                            
+                        hasil_prediksi.append({
+                            'Aspek (Masalah)': asp.title(),
+                            'Trend Slope': slope,
+                            'Rata-rata Keluhan / Bulan': round(np.mean(y_values), 1),
+                            'Prediksi Keluhan Bln Depan': prediksi_bulan_depan,
+                            'Status': status_badge
+                        })
+                        
+                df_hasil_prediksi = pd.DataFrame(hasil_prediksi)
+                
+                # Filter khusus Aspek yang memiliki Trend POSITIF (Masalahnya bertambah)
+                df_potensi_masalah = df_hasil_prediksi[df_hasil_prediksi['Trend Slope'] > 0].sort_values(by='Trend Slope', ascending=False)
+                
+                if not df_potensi_masalah.empty:
+                    col_alert1, col_alert2 = st.columns([1.5, 1])
+                    
+                    with col_alert1:
+                        st.markdown("#### 🚨 Top Aspek Terindikasi Lonjakan Masalah")
+                        fig_pred, ax_pred = plt.subplots(figsize=(8, 4))
+                        
+                        # Plot 5 aspek dengan slope tertinggi
+                        top_5_masalah = df_potensi_masalah.head(5)
+                        sns.barplot(data=top_5_masalah, x='Prediksi Keluhan Bln Depan', y='Aspek (Masalah)', palette='Reds_r', ax=ax_pred)
+                        ax_pred.set_xlabel("Prediksi Jumlah Ulasan Negatif Bulan Berikutnya", fontsize=10)
+                        ax_pred.set_ylabel("", fontsize=10)
+                        
+                        # Tambahkan label angka di ujung bar
+                        for i, v in enumerate(top_5_masalah['Prediksi Keluhan Bln Depan']):
+                            ax_pred.text(v + 0.1, i, f" {v} keluhan", va='center', fontsize=9, fontweight='bold', color='red')
+                            
+                        sns.despine(left=True, bottom=True)
+                        st.pyplot(fig_pred, use_container_width=True)
+                        if st.button("🔍 Perbesar Diagram Prediksi Masalah", key="pred_btn"):
+                            show_large_plot(fig_pred, "pyplot")
+                            
+                    with col_alert2:
+                        st.markdown("#### 💡 Tindakan Darurat (Action Plan)")
+                        for idx, row in df_potensi_masalah.head(3).iterrows():
+                            st.error(
+                                f"**Fokus pada {row['Aspek (Masalah)']}**\n\n"
+                                f"**Indikasi:** Sistem memprediksi akan ada ~{row['Prediksi Keluhan Bln Depan']} keluhan baru di periode depan.\n"
+                                f"**Status:** {row['Status']}"
+                            )
+                            
+                    st.markdown("---")
+                    st.markdown("#### Rincian Data Perhitungan Prediksi (Seluruh Aspek)")
+                    st.dataframe(df_hasil_prediksi.sort_values(by='Trend Slope', ascending=False), use_container_width=True)
+                else:
+                    st.success("🎉 Luar biasa! Berdasarkan data riwayat ulasan, tidak ada aspek keluhan yang menunjukan tren peningkatan di masa mendatang.")
+            else:
+                st.info("⚠️ Rentang waktu data (bulan) tidak mencukupi untuk algoritma membaca pola secara akurat. Silakan pilih rentang filter minimal 3 bulan terakhir di menu Sidebar.")
+        else:
+             st.info("Tidak ada data keluhan (Rating 1 & 2) pada pelabuhan dan rentang waktu yang dipilih.")
+    else:
+        st.warning("Data aspek, waktu, atau rating ulasan belum tersedia/ter-ekstrak.")
+
+# ========================================================
+
 st.markdown("---")
-st.subheader("💡 Insights & Rekomendasi ")
+st.subheader("💡 Insights & Rekomendasi Umum")
 if 'sentiment' in df_working.columns:
     insights = generate_insights(df_working)
     for i, insight in enumerate(insights, 1):
