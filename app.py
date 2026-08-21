@@ -12,6 +12,7 @@ from deep_translator import GoogleTranslator
 import math
 import joblib
 import numpy as np
+import random  # Ditambahkan untuk mengacak tanggal dan jam (jitter)
 
 from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
 from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory
@@ -79,33 +80,46 @@ def load_logo():
 
 logo_polibatam = load_logo()
 
+# =====================================================================
+# FUNGSI PERBAIKAN: Menambahkan pengacakan waktu agar tidak kembar
+# =====================================================================
 def parse_gmaps_time(time_str):
-    if pd.isna(time_str) or str(time_str).strip() == "": 
-        return datetime.now()
-        
-    time_str = str(time_str).lower()
     now = datetime.now()
     
-    if any(x in time_str for x in ['sebulan', 'a month', '1 month']): return now - timedelta(days=30)
-    if any(x in time_str for x in ['setahun', 'a year', '1 year']): return now - timedelta(days=365)
-    if any(x in time_str for x in ['seminggu', 'a week', '1 week']): return now - timedelta(days=7)
-    if any(x in time_str for x in ['sehari', 'a day', '1 day']): return now - timedelta(days=1)
-    if any(x in time_str for x in ['sejam', 'an hour', '1 hour']): return now - timedelta(hours=1)
-    if any(x in time_str for x in ['baru saja', 'just now', 'minutes']): return now
+    # Beri jam dan menit acak agar tidak kembar persis
+    random_time_offset = timedelta(hours=random.randint(0, 23), minutes=random.randint(0, 59))
+    
+    if pd.isna(time_str) or str(time_str).strip() == "": 
+        return now - random_time_offset
+        
+    time_str = str(time_str).lower()
+    
+    # Pengacakan hari agar tersebar di rentang waktu tersebut (jitter)
+    if any(x in time_str for x in ['sebulan', 'a month', '1 month']): return now - timedelta(days=30 + random.randint(-5, 5)) - random_time_offset
+    if any(x in time_str for x in ['setahun', 'a year', '1 year']): return now - timedelta(days=365 + random.randint(-15, 15)) - random_time_offset
+    if any(x in time_str for x in ['seminggu', 'a week', '1 week']): return now - timedelta(days=7 + random.randint(-2, 2)) - random_time_offset
+    if any(x in time_str for x in ['sehari', 'a day', '1 day']): return now - timedelta(days=1) - random_time_offset
+    if any(x in time_str for x in ['sejam', 'an hour', '1 hour']): return now - timedelta(hours=1, minutes=random.randint(0, 30))
+    if any(x in time_str for x in ['baru saja', 'just now', 'minutes']): return now - timedelta(minutes=random.randint(1, 10))
     
     num = re.findall(r'\d+', time_str)
     if not num: 
-        return now
+        return now - random_time_offset
         
     num = int(num[0])
     
-    if 'tahun' in time_str or 'year' in time_str: return now - timedelta(days=num*365)
-    if 'bulan' in time_str or 'month' in time_str: return now - timedelta(days=num*30)
-    if 'minggu' in time_str or 'week' in time_str: return now - timedelta(days=num*7)
-    if 'hari' in time_str or 'day' in time_str: return now - timedelta(days=num)
-    if 'jam' in time_str or 'hour' in time_str: return now - timedelta(hours=num)
+    if 'tahun' in time_str or 'year' in time_str: 
+        return now - timedelta(days=(num*365) + random.randint(-30, 30)) - random_time_offset
+    if 'bulan' in time_str or 'month' in time_str: 
+        return now - timedelta(days=(num*30) + random.randint(-5, 5)) - random_time_offset
+    if 'minggu' in time_str or 'week' in time_str: 
+        return now - timedelta(days=(num*7) + random.randint(-2, 2)) - random_time_offset
+    if 'hari' in time_str or 'day' in time_str: 
+        return now - timedelta(days=num) - random_time_offset
+    if 'jam' in time_str or 'hour' in time_str: 
+        return now - timedelta(hours=num, minutes=random.randint(0, 59))
     
-    return now
+    return now - random_time_offset
 
 @st.cache_data(ttl="1d") 
 def load_data():
@@ -347,10 +361,8 @@ with tab1:
 
     if 'aspects' in df_working.columns and 'bulan_tahun' in df_working.columns:
         
-        # Persiapan data: Memastikan aspek difilter dengan baik
         df_trend_base = df_working.copy()
         
-        # Jika aspek berbentuk list di dalam dataframe, kita explode agar bisa dihitung per aspek
         if not df_trend_base.empty and isinstance(df_trend_base['aspects'].iloc[0], list):
             df_trend_base = df_trend_base.explode('aspects')
             
@@ -360,7 +372,6 @@ with tab1:
             col_filter1, col_filter2 = st.columns([2, 1])
             
             with col_filter1:
-                # Filter untuk memilih Aspek
                 selected_trend_aspects = st.multiselect(
                     "🔍 Filter Aspek (Bisa pilih lebih dari satu):",
                     options=unique_aspects,
@@ -368,7 +379,6 @@ with tab1:
                 )
             
             with col_filter2:
-                # Filter untuk fokus pada Sentimen (Berguna untuk memprediksi Keluhan)
                 sentimen_fokus = st.radio(
                     "🎯 Fokus Analisis:",
                     ["Semua Ulasan", "Khusus Keluhan (Negatif)"],
@@ -376,22 +386,17 @@ with tab1:
                 )
 
             if selected_trend_aspects:
-                # Memfilter data berdasarkan aspek yang dipilih
                 df_trend_aspect = df_trend_base[df_trend_base['aspects'].isin(selected_trend_aspects)]
                 
-                # Memfilter hanya keluhan jika dipilih (berdasarkan rating 1 dan 2)
                 if sentimen_fokus == "Khusus Keluhan (Negatif)" and 'review_rating' in df_trend_aspect.columns:
                     df_trend_aspect = df_trend_aspect[df_trend_aspect['review_rating'] <= 2]
 
                 if not df_trend_aspect.empty:
-                    # Mengelompokkan data berdasarkan Bulan, Pelabuhan, dan Aspek
                     trend_data = df_trend_aspect.groupby(['bulan_tahun', 'pelabuhan', 'aspects']).size().reset_index(name='Frekuensi')
                     trend_data = trend_data.sort_values('bulan_tahun')
 
-                    # Tampilkan keterangan fokus sentimen di luar grafik (pakai Streamlit) agar lebih rapi
                     st.markdown(f"<p style='text-align: center; color: gray;'>Data yang ditampilkan: <b>{sentimen_fokus}</b></p>", unsafe_allow_html=True)
 
-                    # Membuat Line Chart Plotly
                     fig_aspect_trend = px.line(
                         trend_data,
                         x='bulan_tahun',
@@ -400,25 +405,24 @@ with tab1:
                         facet_col='pelabuhan',
                         facet_col_wrap=2,
                         markers=True,
-                        line_shape='spline', # Membuat garis melengkung/halus
+                        line_shape='spline', 
                         labels={'bulan_tahun': 'Bulan', 'Frekuensi': 'Jumlah Kemunculan'}
                     )
 
-                    # Mempercantik tampilan layout Plotly
                     tinggi_grafik = max(400, math.ceil(df_trend_aspect['pelabuhan'].nunique() / 2) * 350)
                     fig_aspect_trend.update_layout(
                         height=tinggi_grafik,
                         plot_bgcolor='rgba(0,0,0,0)',
                         paper_bgcolor='rgba(0,0,0,0)',
-                        hovermode="x unified", # Menyatukan tooltip saat di hover per bulan
-                        margin=dict(t=40, b=100), # Beri ruang lebih di atas dan bawah
+                        hovermode="x unified",
+                        margin=dict(t=40, b=100), 
                         legend=dict(
                             orientation="h", 
                             yanchor="top",
-                            y=-0.15,           # Posisi di bawah grafik
+                            y=-0.15,
                             xanchor="center", 
                             x=0.5,
-                            title_text=""      # Menghilangkan teks "Aspek"
+                            title_text=""
                         )
                     )
                     
@@ -466,10 +470,23 @@ with tab2:
                     fill_value=0
                 )
                 
-                fig_hm, ax_hm = plt.subplots(figsize=(8, 6))
+                # Membuat list bulan dari start_date sampai end_date
+                all_months_in_range = pd.period_range(start=start_date, end=end_date, freq='M').astype(str).tolist()
+                
+                # Reindex kolom (bulan) dengan isi 0 untuk bulan yang kosong keluhannya
+                pivot_keluhan = pivot_keluhan.reindex(columns=all_months_in_range, fill_value=0)
+                
+                # Opsional: Memaksa tampilnya seluruh pelabuhan yang dipilih, meskipun 0 keluhan
+                pivot_keluhan = pivot_keluhan.reindex(index=selected_ports, fill_value=0)
+                
+                fig_hm, ax_hm = plt.subplots(figsize=(10, 6)) # Dibuat lebih lebar agar muat banyak bulan
                 sns.heatmap(pivot_keluhan, cmap='Reds', annot=True, fmt='d', linewidths=.5, ax=ax_hm, annot_kws={"size": 10})
                 ax_hm.set_xlabel("Periode (Bulan)", fontsize=9)
                 ax_hm.set_ylabel("", fontsize=9)
+                
+                # Memiringkan label bulan 45 derajat agar tidak bertabrakan saat dirender
+                plt.setp(ax_hm.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
+                
                 sns.despine(left=True, bottom=True)
                 st.pyplot(fig_hm, use_container_width=True)
             else:
