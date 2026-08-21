@@ -169,7 +169,7 @@ class TextPreprocessor:
         # Hapus baris yang kosong setelah dibersihkan
         df = df[df['semi_clean_text'].str.strip() != '']
         print(f"Proses NLP selesai. Total data akhir: {len(df)} baris")
-        
+            
         return df
 
     def process_pipeline(self, df, text_col='text'):
