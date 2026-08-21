@@ -1,3 +1,4 @@
+# sentiment/indobert.py
 from transformers import pipeline
 import pandas as pd
 import torch
@@ -19,6 +20,7 @@ class SentimentAnalyzer:
         truncated = [str(t)[:512] for t in texts]
         results = self.nlp(truncated)
         
+        # Ubah output mesin (LABEL_0/1/2) menjadi teks yang benar menggunakan label_mapping
         mapped_labels = []
         for res in results:
             raw_label = res['label']
