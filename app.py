@@ -36,7 +36,7 @@ if 'sidebar_state' not in st.session_state:
 st.set_page_config(
     page_title="Dashboard Analisis Pelabuhan", 
     layout="wide", 
-    initial_sidebar_state=st.session_state.sidebar_state
+   # initial_sidebar_state=st.session_state.sidebar_state
 )
 
 responsive_css = """
@@ -49,7 +49,7 @@ responsive_css = """
     }
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-   # header {visibility: hidden;}
+    header {visibility: hidden;}
     [data-testid="stToolbar"] {visibility: hidden;}
     div[data-testid="metric-container"] > div > div {
         font-size: 1.6rem !important;
