@@ -388,6 +388,9 @@ with tab1:
                     trend_data = df_trend_aspect.groupby(['bulan_tahun', 'pelabuhan', 'aspects']).size().reset_index(name='Frekuensi')
                     trend_data = trend_data.sort_values('bulan_tahun')
 
+                    # Tampilkan keterangan fokus sentimen di luar grafik (pakai Streamlit) agar lebih rapi
+                    st.markdown(f"<p style='text-align: center; color: gray;'>Data yang ditampilkan: <b>{sentimen_fokus}</b></p>", unsafe_allow_html=True)
+
                     # Membuat Line Chart Plotly
                     fig_aspect_trend = px.line(
                         trend_data,
@@ -398,8 +401,7 @@ with tab1:
                         facet_col_wrap=2,
                         markers=True,
                         line_shape='spline', # Membuat garis melengkung/halus
-                        labels={'bulan_tahun': 'Bulan', 'Frekuensi': 'Jumlah Kemunculan', 'aspects': 'Aspek'},
-                        title=f"Tren Kemunculan Aspek - {sentimen_fokus}"
+                        labels={'bulan_tahun': 'Bulan', 'Frekuensi': 'Jumlah Kemunculan'}
                     )
 
                     # Mempercantik tampilan layout Plotly
@@ -409,7 +411,15 @@ with tab1:
                         plot_bgcolor='rgba(0,0,0,0)',
                         paper_bgcolor='rgba(0,0,0,0)',
                         hovermode="x unified", # Menyatukan tooltip saat di hover per bulan
-                        legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5)
+                        margin=dict(t=40, b=100), # Beri ruang lebih di atas dan bawah
+                        legend=dict(
+                            orientation="h", 
+                            yanchor="top",
+                            y=-0.15,           # Posisi di bawah grafik
+                            xanchor="center", 
+                            x=0.5,
+                            title_text=""      # Menghilangkan teks "Aspek"
+                        )
                     )
                     
                     fig_aspect_trend.update_xaxes(showgrid=False, tickangle=-45, title_text='')
