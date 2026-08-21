@@ -464,21 +464,18 @@ with tab2:
                     fill_value=0
                 )
                 
-                # Membuat list bulan dari start_date sampai end_date
-                all_months_in_range = pd.period_range(start=start_date, end=end_date, freq='M').astype(str).tolist()
-                
-                # Reindex kolom (bulan) dengan isi 0 untuk bulan yang kosong keluhannya
-                pivot_keluhan = pivot_keluhan.reindex(columns=all_months_in_range, fill_value=0)
-                
-                # Opsional: Memaksa tampilnya seluruh pelabuhan yang dipilih, meskipun 0 keluhan
+                # Memastikan semua pelabuhan yang di-filter muncul (walau keluhannya 0)
                 pivot_keluhan = pivot_keluhan.reindex(index=selected_ports, fill_value=0)
                 
-                fig_hm, ax_hm = plt.subplots(figsize=(10, 6)) # Dibuat lebih lebar agar muat banyak bulan
+                # Memastikan heatmap HANYA menampilkan bulan-bulan yang memiliki minimal 1 keluhan
+                pivot_keluhan = pivot_keluhan.loc[:, (pivot_keluhan != 0).any(axis=0)]
+                
+                fig_hm, ax_hm = plt.subplots(figsize=(10, 6)) 
                 sns.heatmap(pivot_keluhan, cmap='Reds', annot=True, fmt='d', linewidths=.5, ax=ax_hm, annot_kws={"size": 10})
                 ax_hm.set_xlabel("Periode (Bulan)", fontsize=9)
                 ax_hm.set_ylabel("", fontsize=9)
                 
-                # Memiringkan label bulan 45 derajat agar tidak bertabrakan saat dirender
+                # Memiringkan label bulan 45 derajat
                 plt.setp(ax_hm.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
                 
                 sns.despine(left=True, bottom=True)
@@ -589,9 +586,6 @@ with st.expander("Lihat Data Ulasan Mentah (Tabel)"):
     if 'aspects' in df_working.columns:
         available_cols.append('aspects')
     
-    # =========================================================================
-    # FITUR PERBAIKAN: Menghilangkan Jam pada tampilan tabel
-    # =========================================================================
     df_tabel = df_working[available_cols].copy()
     if 'tanggal' in df_tabel.columns:
         # Mengubah format menjadi YYYY-MM-DD saja tanpa jam
