@@ -1,8 +1,3 @@
-Berikut adalah kode lengkap yang sudah saya perbaiki. Saya sudah memindahkan posisi keterangan warna (legend) ke bagian bawah grafik, menghilangkan teks "Aspek" yang mengambang, serta membersihkan karakter spasi *error* yang sering muncul saat *copy-paste*.
-
-Silakan salin seluruh kode di bawah ini dan timpa kode lama Anda:
-
-```python
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
