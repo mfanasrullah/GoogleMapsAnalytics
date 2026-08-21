@@ -6,22 +6,18 @@ from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFacto
 from deep_translator import GoogleTranslator
 from langdetect import detect, DetectorFactory
 
-
 DetectorFactory.seed = 0 
 
 class TextPreprocessor:
     def __init__(self):
         print("Mempersiapkan modul NLP Sastrawi dan Kamus...")
         
-
         factory_stem = StemmerFactory()
         self.stemmer = factory_stem.create_stemmer()
         
-
         factory_stop = StopWordRemoverFactory()
         self.base_stopwords = set(factory_stop.get_stop_words())
         
-
         self.custom_stopwords = {
             'pelabuhan', 'ferry', 'terminal', 'batam', 'centre', 'center', 'sekupang', 
             'punggur', 'telaga', 'nongsapura', 'harbour', 'bay', 'singapore', 'singapura',
@@ -41,7 +37,6 @@ class TextPreprocessor:
             'bawah', 'luar', 'depan', 'belakang', 'satu', 'dua', 'tiga', 'kali', 'detik', 
             'bulan', 'tahun', 'waktu', 'sekarang', 'nanti', 'besok', 'awal', 'akhir',
             
-        
             'the', 'and', 'to', 'is', 'it', 'in', 'for', 'of', 'are', 'you', 'from', 
             'not', 'there', 'this', 'with', 'on', 'at', 'but', 'be', 'as', 'so', 
             'have', 'that', 'or', 'if', 'we', 'was', 'my', 'can', 'will', 'like', 
@@ -54,7 +49,6 @@ class TextPreprocessor:
             'above', 'below', 'up', 'down', 'out', 'off', 'over', 'under', 'again', 
             'further', 'then', 'once', 'here',
             
-          
             'masih', 'mau', 'atau', 'jadi', 'akan', 'saat', 'lagi', 'perlu', 'jika', 
             'lain', 'setelah', 'beberapa', 'sampai', 'oleh', 'tetapi', 'dapat', 'gak', 
             'ga', 'agak', 'adalah', 'semua', 'sekitar', 'seperti', 'salah', 'saja', 
@@ -62,7 +56,6 @@ class TextPreprocessor:
             'meskipun', 'sedang', 'telah', 'sering', 'kadang', 'jarang', 'pasti', 
             'mungkin', 'boleh', 'wajib', 'serta',
             
-   
             'port', 'area', 'place', 'taxi', 'taksi', 'kota', 'internasional', 
             'international', 'immigration', 'small', 'penyeberangan', 'tujuan', 
             'lantai', 'mobil', 'mall', 'laut', 'ticket', 'ruang', 'lokasi', 'tempatnya', 
@@ -71,7 +64,6 @@ class TextPreprocessor:
         
         self.all_stopwords = self.base_stopwords.union(self.custom_stopwords)
         
-     
         self.slang_dict = {
             'bgus': 'bagus', 'bgt': 'banget', 'bgs': 'bagus', 'brg': 'barang',
             'klo': 'kalau', 'klw': 'kalau', 'gmn': 'bagaimana', 'gmna': 'bagaimana',
@@ -129,12 +121,22 @@ class TextPreprocessor:
 
     def final_clean_pipeline(self, text):
         """
-        Pipa Tahap 2: Lanjutan dari semi_clean untuk WordCloud & Aspek.
-        Membuang stopwords dan melakukan stemming.
+        Pipa Tahap 2: Lanjutan dari semi_clean untuk SVM & Aspek.
+        Membuang stopwords dan MELAKUKAN stemming.
         """
         text = self.remove_stopwords(text)
         text = self.stemmer.stem(text)
         return text
+
+    # --- FITUR BARU UNTUK WORDCLOUD ---
+    def wordcloud_pipeline(self, text):
+        """
+        Pipa Tahap 3: Khusus untuk WordCloud.
+        Hanya membuang stopwords TANPA melakukan stemming agar makna kata tidak distorsi.
+        """
+        text = self.remove_stopwords(text)
+        return text
+    # ----------------------------------
 
     def process_dataframe(self, df, text_col='text'):
         if df.empty:
@@ -151,14 +153,20 @@ class TextPreprocessor:
         df = df.drop_duplicates(subset=[text_col])
         df[text_col] = df[text_col].fillna('')
         
-        print(f"Memulai proses pembersihan & NLP dua tahap pada kolom '{text_col}'...")
+        print(f"Memulai proses pembersihan & NLP pada kolom '{text_col}'...")
         
+        # Tahap 1: Teks Semi Bersih (Untuk IndoBERT)
         df['semi_clean_text'] = df[text_col].apply(self.semi_clean_pipeline)
         
-  
+        # Tahap 2: Teks Final dengan Stemming (Untuk Model SVM & Ekstraksi Aspek)
         df['final_text'] = df['semi_clean_text'].apply(self.final_clean_pipeline)
         
-      
+        # --- FITUR BARU: Tahap 3 ---
+        # Teks Khusus WordCloud tanpa Stemming
+        df['wordcloud_text'] = df['semi_clean_text'].apply(self.wordcloud_pipeline)
+        # ---------------------------
+        
+        # Hapus baris yang kosong setelah dibersihkan
         df = df[df['semi_clean_text'].str.strip() != '']
         print(f"Proses NLP selesai. Total data akhir: {len(df)} baris")
         
