@@ -445,8 +445,8 @@ with tab4:
     recall_val = 0.72
     f1_val = 0.73
     
-    with metrik_col1: st.metric(label="Akurasi (Accuracy)", value=f"{akurasi_val:.1%}")
-    with metrik_col2: st.metric(label="Presisi (Precision)", value=f"{presisi_val:.1%}")
+    with metrik_col1: st.metric(label="Accuracy", value=f"{akurasi_val:.1%}")
+    with metrik_col2: st.metric(label="Presisi Precision", value=f"{presisi_val:.1%}")
     with metrik_col3: st.metric(label="Recall", value=f"{recall_val:.1%}")
     with metrik_col4: st.metric(label="F1-Score", value=f"{f1_val:.1%}")
     
