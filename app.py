@@ -26,29 +26,264 @@ sns.set_theme(style="whitegrid")
 sns.set_palette("Blues_d")
 
 # ==========================================
-# INISIALISASI & CONFIG
+# INISIALISASI STATE UNTUK TOGGLE SIDEBAR
 # ==========================================
+if 'sidebar_state' not in st.session_state:
+    st.session_state.sidebar_state = 'expanded'
+
+# Set konfigurasi halaman menggunakan nilai dari session state
+# PERBAIKAN: Menghapus tanda pagar (#) agar state ini benar-benar diterapkan ke UI
 st.set_page_config(
     page_title="Dashboard Analisis Pelabuhan", 
     layout="wide", 
-    initial_sidebar_state="expanded"
+    initial_sidebar_state=st.session_state.sidebar_state
 )
 
-# Header dan Toolbar dihapus dari visibility: hidden agar muncul kembali
 responsive_css = """
 <style>
+    /* ============================================================
+       DESIGN SYSTEM — "Harbor Analytics"
+       Tema maritim (pelabuhan & feri): Ocean Navy -> Harbor Blue -> Tide Teal
+       Font: Sora (judul) + Inter (isi/UI) + IBM Plex Mono (angka data)
+    ============================================================ */
+    @import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600;700&display=swap');
+
+    :root {
+        --ocean-deep: #0A2647;
+        --ocean-mid: #144272;
+        --tide-teal: #2C9FA3;
+        --foam: #EAF6F6;
+        --sand: #F7FAFC;
+        --ink: #17293D;
+        --muted: #64748B;
+        --card-shadow: 0 4px 18px rgba(10, 38, 71, 0.08);
+        --card-shadow-hover: 0 10px 28px rgba(10, 38, 71, 0.16);
+    }
+
+    .stApp {
+        background: linear-gradient(180deg, var(--foam) 0%, var(--sand) 55%, #FFFFFF 100%);
+        font-family: 'Inter', sans-serif;
+        color: var(--ink);
+    }
+    .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6 {
+        font-family: 'Sora', sans-serif !important;
+        color: var(--ocean-deep);
+        letter-spacing: -0.01em;
+    }
+
+    /* ---------- Layout dasar & responsivitas umum ---------- */
     .block-container {
-        padding-top: 2rem;
-        padding-bottom: 2rem;
-        padding-left: 1rem;
-        padding-right: 1rem;
+        padding-top: 1.4rem;
+        padding-bottom: 3rem;
+        padding-left: clamp(0.75rem, 3vw, 2.5rem);
+        padding-right: clamp(0.75rem, 3vw, 2.5rem);
+        max-width: 1440px;
     }
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
+    [data-testid="stToolbar"] {visibility: hidden;}
+
+    hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(10,38,71,0.15), transparent); margin: 1.6rem 0; }
+    ::selection { background: var(--tide-teal); color: white; }
+
+    @media (prefers-reduced-motion: reduce) {
+        * { animation: none !important; transition: none !important; }
+    }
+
+    /* ---------- Hero banner (elemen signature halaman) ---------- */
+    @keyframes tideShift {
+        0%, 100% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+    }
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .hero-banner {
+        position: relative;
+        overflow: hidden;
+        background: linear-gradient(120deg, var(--ocean-deep) 0%, var(--ocean-mid) 45%, var(--tide-teal) 100%);
+        background-size: 200% 200%;
+        animation: tideShift 14s ease-in-out infinite;
+        border-radius: 20px;
+        padding: clamp(1.1rem, 4vw, 2rem) clamp(1.2rem, 4vw, 2.4rem) clamp(1.6rem, 5vw, 2.6rem);
+        margin-bottom: 1.3rem;
+        box-shadow: var(--card-shadow);
+        color: white;
+    }
+    .hero-banner::after {
+        content: "⚓";
+        position: absolute;
+        right: 0.5rem;
+        top: -1.2rem;
+        font-size: clamp(4rem, 12vw, 7rem);
+        opacity: 0.10;
+    }
+    .hero-banner::before {
+        content: "";
+        position: absolute; left: 0; right: 0; bottom: 0; height: 20px;
+        background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 60' preserveAspectRatio='none'%3E%3Cpath d='M0,30 C300,60 900,0 1200,30 L1200,60 L0,60 Z' fill='rgba(255,255,255,0.14)'/%3E%3C/svg%3E") repeat-x;
+        background-size: 500px 20px;
+    }
+    .hero-title {
+        font-family: 'Sora', sans-serif !important;
+        font-weight: 700;
+        font-size: clamp(1.3rem, 3.6vw, 2.1rem);
+        margin: 0;
+        line-height: 1.25;
+        color: white !important;
+        position: relative; z-index: 1;
+    }
+    .hero-subtitle {
+        font-size: clamp(0.78rem, 2vw, 0.98rem);
+        opacity: 0.92;
+        margin-top: 0.35rem;
+        font-weight: 400;
+        position: relative; z-index: 1;
+    }
+
+    /* ---------- Kartu KPI ---------- */
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+        gap: 1rem;
+        margin-bottom: 0.4rem;
+    }
+    .kpi-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.1rem 1.3rem;
+        box-shadow: var(--card-shadow);
+        border: 1px solid rgba(10,38,71,0.06);
+        display: flex;
+        align-items: center;
+        gap: 0.9rem;
+        transition: transform 0.25s ease, box-shadow 0.25s ease;
+        animation: fadeInUp 0.5s ease-out both;
+    }
+    .kpi-card:nth-of-type(2) { animation-delay: 0.08s; }
+    .kpi-card:nth-of-type(3) { animation-delay: 0.16s; }
+    .kpi-card:hover { transform: translateY(-3px); box-shadow: var(--card-shadow-hover); }
+    .kpi-icon {
+        flex-shrink: 0;
+        width: 48px; height: 48px;
+        border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.5rem;
+        background: linear-gradient(135deg, var(--ocean-mid), var(--tide-teal));
+    }
+    .kpi-label { font-size: clamp(0.68rem, 1.8vw, 0.8rem); color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 0.15rem; }
+    .kpi-value { font-family: 'IBM Plex Mono', monospace; font-size: clamp(1.2rem, 3.2vw, 1.65rem); font-weight: 600; color: var(--ocean-deep); }
+
+    /* ---------- st.metric bawaan (dipakai di tab Evaluasi Model) ---------- */
+    div[data-testid="metric-container"] {
+        background: white;
+        border-radius: 14px;
+        padding: 0.9rem 1.1rem;
+        box-shadow: var(--card-shadow);
+        border: 1px solid rgba(10,38,71,0.06);
+    }
     div[data-testid="metric-container"] > div > div {
-        font-size: 1.6rem !important;
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: clamp(1.05rem, 2.8vw, 1.5rem) !important;
         word-wrap: break-word;
+        color: var(--ocean-deep);
+    }
+    div[data-testid="metric-container"] label { color: var(--muted) !important; }
+
+    /* ---------- Tab ---------- */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 6px;
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        background: var(--foam);
+        padding: 6px;
+        border-radius: 14px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        border-radius: 10px;
+        padding: 0.55rem 1.1rem;
+        font-weight: 600;
+        font-size: clamp(0.76rem, 2vw, 0.92rem);
+        white-space: nowrap;
+        transition: all 0.2s ease;
+    }
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(135deg, var(--ocean-deep), var(--tide-teal)) !important;
+        color: white !important;
+    }
+
+    /* ---------- Tombol (termasuk toggle sidebar kustom) ---------- */
+    .stButton>button {
+        border-radius: 10px;
+        font-weight: 600;
+        min-height: 42px;
+        border: 1px solid rgba(10,38,71,0.15);
+        transition: all 0.2s ease;
+        margin-top: 0;
+        margin-bottom: 0.5rem;
+    }
+    .stButton>button:hover {
+        border-color: var(--tide-teal);
+        color: var(--tide-teal);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 10px rgba(44,159,163,0.18);
+    }
+    .stButton>button[kind="primary"] {
+        background: linear-gradient(135deg, var(--ocean-deep), var(--tide-teal)) !important;
+        border: none !important;
+        color: white !important;
+    }
+
+    /* ---------- Progress bar (hasil prediksi SVM) ---------- */
+    .stProgress > div > div > div { border-radius: 10px; background-color: #E3ECEF; }
+    .stProgress > div > div > div > div { background: linear-gradient(90deg, var(--ocean-mid), var(--tide-teal)); border-radius: 10px; }
+
+    /* ---------- Sidebar ---------- */
+    section[data-testid="stSidebar"] {
+        background: linear-gradient(180deg, var(--foam) 0%, #DCEEF0 100%);
+        border-right: 1px solid rgba(10,38,71,0.08);
+    }
+
+    /* ---------- Tag terpilih pada multiselect ---------- */
+    span[data-baseweb="tag"] { background-color: var(--tide-teal) !important; }
+
+    /* ---------- Kartu insight & expander ---------- */
+    .insight-card {
+        background: white;
+        border-radius: 14px;
+        padding: 1rem 1.3rem;
+        box-shadow: var(--card-shadow);
+        border-left: 4px solid var(--tide-teal);
+        margin-bottom: 0.7rem;
+        font-size: clamp(0.8rem, 1.9vw, 0.94rem);
+        line-height: 1.65;
+        color: var(--ink);
+        animation: fadeInUp 0.5s ease-out both;
+    }
+    [data-testid="stExpander"] { border-radius: 14px !important; overflow: hidden; border: 1px solid rgba(10,38,71,0.08) !important; }
+
+    /* ---------- Responsif: Tablet ---------- */
+    @media (max-width: 992px) {
+        .kpi-grid { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+    }
+
+    /* ---------- Responsif: Mobile (HP portrait & landscape sempit) ---------- */
+    @media (max-width: 640px) {
+        .block-container { padding-left: 0.6rem; padding-right: 0.6rem; padding-top: 0.8rem; }
+        .kpi-grid { grid-template-columns: 1fr; gap: 0.65rem; }
+        .hero-banner { border-radius: 14px; }
+        .stTabs [data-baseweb="tab"] { padding: 0.45rem 0.75rem; }
+    }
+
+    /* ---------- Responsif: HP posisi landscape (tinggi layar pendek) ---------- */
+    @media (max-height: 480px) and (orientation: landscape) {
+        .block-container { padding-top: 0.5rem; padding-bottom: 1rem; }
+        .hero-banner { padding: 0.6rem 1.1rem 1rem; margin-bottom: 0.6rem; }
+        .hero-subtitle { display: none; }
+        .kpi-grid { grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+        .kpi-card { padding: 0.6rem 0.8rem; }
     }
 </style>
 """
@@ -246,8 +481,28 @@ else:
 # MAIN CONTENT AREA
 # ==========================================
 
-st.title("Dashboard Analisis Sentimen Pelabuhan")
-st.markdown("<p style='font-size: 16px; color: gray; margin-top:-15px;'>powered by Tim Analitik Polibatam</p>", unsafe_allow_html=True)
+# LOGIKA TOMBOL TOGGLE SIDEBAR DI AREA UTAMA
+col_title, col_toggle = st.columns([5, 1])
+with col_title:
+    st.markdown(
+        """
+        <div class="hero-banner">
+            <p class="hero-title">🌊 Dashboard Analisis Sentimen Pelabuhan</p>
+            <p class="hero-subtitle">Powered by Tim Analitik Polibatam — pemantauan ulasan pelanggan berbasis AI secara real-time</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+with col_toggle:
+    # Tombol toggle mengubah nilai session_state dan melakukan rerun
+    btn_label = "⏩ Tampilkan Sidebar" if st.session_state.sidebar_state == 'collapsed' else "⏪ Sembunyikan Sidebar"
+    if st.button(btn_label, use_container_width=True):
+        if st.session_state.sidebar_state == 'expanded':
+            st.session_state.sidebar_state = 'collapsed'
+        else:
+            st.session_state.sidebar_state = 'expanded'
+        st.rerun()
 
 st.markdown("---")
 
