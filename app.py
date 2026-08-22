@@ -487,7 +487,7 @@ with col_title:
     st.markdown(
         """
         <div class="hero-banner">
-            <p class="hero-title">🌊 Dashboard Analisis Sentimen Pelabuhan</p>
+            <p class="hero-title">Dashboard Analisis Sentimen Pelabuhan</p>
             <p class="hero-subtitle">Powered by Tim Analitik Polibatam — pemantauan ulasan pelanggan berbasis AI secara real-time</p>
         </div>
         """,
