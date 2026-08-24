@@ -502,7 +502,7 @@ with col_title:
         """
         <div class="hero-banner">
             <p class="hero-title">Dashboard Analisis Sentimen Pelabuhan</p>
-            <p class="hero-subtitle">Powered by Tim Analitik Polibatam — pemantauan ulasan pelanggan berbasis AI secara real-time</p>
+            <p class="hero-subtitle">Powered by Tim Analitik Polibatam — Pemantauan Ulasan Pelanggan Berbasis Keserdasan Buatan</p>
         </div>
         """,
         unsafe_allow_html=True
