@@ -1,4 +1,3 @@
-# aspect/summary.py
 import pandas as pd
 
 class AspectSummarizer:
@@ -8,11 +7,9 @@ class AspectSummarizer:
         Mengubah DataFrame yang memiliki list aspek menjadi format yang 
         bisa divisualisasikan dengan mudah di Dashboard.
         """
-        # Explode kolom aspek (memecah list menjadi baris tersendiri)
-        # Contoh: Baris 1 aspek ['Fasilitas', 'Akses'] -> Menjadi 2 baris terpisah
+      
         df_exploded = df.explode(aspect_col)
         
-        # Menghitung agregasi: Berapa banyak sentimen Pos/Neg untuk setiap aspek per pelabuhan
         summary = df_exploded.groupby([location_col, aspect_col, sentiment_col]).size().reset_index(name='count')
         
         return summary
@@ -29,6 +26,5 @@ class AspectSummarizer:
         neg_df = df[df['sentiment'] == 'NEGATIVE']
         pain_points = neg_df.groupby([location_col, 'aspects']).size().reset_index(name='complaint_count')
         
-        # Urutkan dari keluhan terbanyak
         pain_points = pain_points.sort_values(['location', 'complaint_count'], ascending=[True, False])
         return pain_points
