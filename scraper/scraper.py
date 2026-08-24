@@ -51,10 +51,10 @@ class GoogleMapsScraper:
         if "Batam Centre" in location_name or "Batam Center" in location_name:
             print(f"\n⚠️  PERHATIAN: Memasuki halaman {location_name}.")
             print("Sistem Google mungkin meminta Login atau Persetujuan Cookie.")
-            print("Anda memiliki waktu 3 menit (180 detik) untuk menyelesaikannya secara manual di browser...")
+            print("Anda memiliki waktu 3 menit (100 detik) untuk menyelesaikannya secara manual di browser...")
             
-            # Hitung mundur 180 detik (3 menit)
-            for i in range(180, 0, -1):
+            # Hitung mundur 100 detik (3 menit)
+            for i in range(100, 0, -1):
                 mins, secs = divmod(i, 60)
                 print(f"Sisa waktu intervensi: {mins:02d} menit {secs:02d} detik", end='\r')
                 time.sleep(1)
