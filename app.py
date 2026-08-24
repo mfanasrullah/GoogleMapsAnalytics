@@ -14,6 +14,7 @@ import joblib
 import numpy as np
 import random 
 import matplotlib.ticker as ticker 
+import json # Ditambahkan untuk membaca file evaluasi
 
 from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
 from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory, StopWordRemover, ArrayDictionary
@@ -942,36 +943,47 @@ with tab4:
     st.header("Evaluasi Kinerja Model SVM")
     st.markdown("Bagian ini menampilkan metrik performa model Support Vector Machine.")
 
-    metrik_col1, metrik_col2, metrik_col3, metrik_col4 = st.columns(4)
+    # ==========================================================
+    # [PERBAIKAN]: MEMBACA METRIK DARI FILE JSON HASIL TRAINING
+    # ==========================================================
+    import json
+    metrics_path = os.path.join('data', 'models', 'eval_metrics.json')
+    
+    if os.path.exists(metrics_path):
+        with open(metrics_path, 'r') as f:
+            metrics_data = json.load(f)
+            
+        akurasi_val = metrics_data.get('accuracy', 0)
+        presisi_val = metrics_data.get('precision', 0)
+        recall_val = metrics_data.get('recall', 0)
+        f1_val = metrics_data.get('f1_score', 0)
+        
+        metrik_col1, metrik_col2, metrik_col3, metrik_col4 = st.columns(4)
+        with metrik_col1: st.metric(label="Accuracy", value=f"{akurasi_val:.1%}")
+        with metrik_col2: st.metric(label="Precision", value=f"{presisi_val:.1%}")
+        with metrik_col3: st.metric(label="Recall", value=f"{recall_val:.1%}")
+        with metrik_col4: st.metric(label="F1-Score", value=f"{f1_val:.1%}")
 
-    akurasi_val = 0.72
-    presisi_val = 0.76
-    recall_val = 0.72
-    f1_val = 0.73
+        st.markdown("---")
+        st.markdown("#### Confusion Matrix")
+        st.info("Visualisasi ini menunjukan kemampuan model dalam membedakan setiap kelas (Positif, Netral, Negatif). Sumbu Y adalah kelas asli (Actual), dan Sumbu X adalah tebakan model (Predicted).")
 
-    with metrik_col1: st.metric(label="Accuracy", value=f"{akurasi_val:.1%}")
-    with metrik_col2: st.metric(label="Presisi Precision", value=f"{presisi_val:.1%}")
-    with metrik_col3: st.metric(label="Recall", value=f"{recall_val:.1%}")
-    with metrik_col4: st.metric(label="F1-Score", value=f"{f1_val:.1%}")
+        data_cm = np.array(metrics_data.get('confusion_matrix', []))
+        labels_cm = metrics_data.get('labels', ['NEGATIF', 'NETRAL', 'POSITIF'])
 
-    st.markdown("---")
-    st.markdown("#### Confusion Matrix")
-    st.info("Visualisasi ini menunjukan kemampuan model dalam membedakan setiap kelas (Positif, Netral, Negatif). Sumbu Y adalah kelas asli (Actual), dan Sumbu X adalah tebakan model (Predicted).")
+        if data_cm.size > 0:
+            fig_cm, ax_cm = plt.subplots(figsize=(6, 4))
+            sns.heatmap(data_cm, annot=True, fmt='d', cmap='Blues', xticklabels=labels_cm, yticklabels=labels_cm, ax=ax_cm)
+            ax_cm.set_xlabel('Predicted Label')
+            ax_cm.set_ylabel('True Label')
+            st.pyplot(fig_cm)
+            if st.button("🔍 Perbesar Confusion Matrix", key="cm_btn"):
+                show_large_plot(fig_cm, "pyplot")
+        else:
+            st.warning("Data Confusion Matrix tidak ditemukan dalam file JSON.")
 
-    data_cm = np.array([
-        [38, 11, 12],
-        [10, 23, 28],
-        [26, 50, 288]
-    ])
-    labels = ['Negatif', 'Netral', 'Positif']
-
-    fig_cm, ax_cm = plt.subplots(figsize=(6, 4))
-    sns.heatmap(data_cm, annot=True, fmt='d', cmap='Blues', xticklabels=labels, yticklabels=labels, ax=ax_cm)
-    ax_cm.set_xlabel('Predicted Label')
-    ax_cm.set_ylabel('True Label')
-    st.pyplot(fig_cm)
-    if st.button("🔍 Perbesar Confusion Matrix", key="cm_btn"):
-        show_large_plot(fig_cm, "pyplot")
+    else:
+        st.warning("⚠️ File metrik evaluasi (`eval_metrics.json`) belum tersedia. Harap jalankan script pelatihan model (`train_model.py`) terlebih dahulu.")
 
 # ==========================================
 # PEMBARUAN: INSIGHT BERBASIS FAKTA DATA REAL-TIME
