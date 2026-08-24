@@ -1,26 +1,46 @@
 # aspect/keyword.py
 
-# Kamus pemetaan aspek untuk pelabuhan feri di Batam
+# Kamus pemetaan aspek untuk pelabuhan feri di Batam (10 Aspek Spesifik)
 ASPECT_DICT = {
-    "Fasilitas & Kebersihan": [
-        "toilet", "wc", "bersih", "kotor", "ac", "panas", "kursi", 
-        "ruang tunggu", "wifi", "kios", "mushola", "colokan", "fasilitas", "bau"
+    "Fasilitas": [
+        "ac", "panas", "kursi", "ruang tunggu", "wifi", "kios", 
+        "mushola", "colokan", "fasilitas", "lift", "eskalator", 
+        "tangga", "minimarket", "kantin", "toko", "atm"
     ],
-    "Pelayanan & Imigrasi": [
-        "pelayanan", "petugas", "staf", "satpam", "ramah", "jutek", 
-        "lambat", "cepat", "imigrasi", "antrean", "antri", "pemeriksaan", 
-        "loket", "custom", "bea cukai", "paspor", "sistem"
+    "Kebersihan": [
+        "toilet", "wc", "bersih", "kotor", "bau", "pesing", 
+        "jorok", "kumuh", "sampah", "becek", "rapi", "debu"
     ],
-    "Akses & Parkir": [
-        "parkir", "luas", "sempit", "jalan", "taksi", "ojek", 
-        "transportasi", "lokasi", "strategis", "akses", "macet", "grab", "gojek"
+    "Pelayanan": [
+        "pelayanan", "petugas", "staf", "ramah", "jutek", 
+        "bantu", "sopan", "kasar", "responsif", "senyum", "cuek"
     ],
-    "Harga & Tiket": [
-        "harga", "tiket", "mahal", "murah", "boarding pass", "pajak", 
-        "seaport tax", "biaya", "refund", "reschedule"
+    "Imigrasi": [
+        "imigrasi", "paspor", "pemeriksaan", "custom", "bea cukai", 
+        "stempel", "petugas imigrasi", "interogasi", "dokumen", "visa", "autogate"
     ],
-    "Kenyamanan & Keamanan": [
-        "nyaman", "bising", "berisik", "ramai", "sepi", "aman", 
-        "calok", "pengap", "desak", "rapi"
+    "Akses": [
+        "jalan", "lokasi", "strategis", "macet", "transportasi", 
+        "grab", "gojek", "taksi online", "ojek", "tujuan", "mudah dicapai"
+    ],
+    "Parkir": [
+        "parkir", "lahan", "luas", "sempit", "penuh", "kendaraan", 
+        "inap", "motor", "mobil", "tarif parkir"
+    ],
+    "Harga": [
+        "harga", "mahal", "murah", "biaya", "seaport tax", 
+        "pajak", "rp", "sgd", "uang", "pungli", "denda"
+    ],
+    "Tiket": [
+        "tiket", "boarding pass", "loket", "refund", "reschedule", 
+        "counter", "agen", "pesan", "jadwal", "delay", "kapal"
+    ],
+    "Kenyamanan": [
+        "nyaman", "bising", "berisik", "pengap", "sejuk", 
+        "padat", "sesak", "sumpek", "tenang", "adem", "ramai", "sepi"
+    ],
+    "Keamanan": [
+        "aman", "satpam", "security", "calok", "calo", "preman", 
+        "keamanan", "hilang", "jaga", "rawan", "paksa"
     ]
 }

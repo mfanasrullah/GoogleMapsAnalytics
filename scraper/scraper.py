@@ -16,11 +16,25 @@ from config import TARGET_LOCATIONS, DATA_RAW
 class GoogleMapsScraper:
     def __init__(self):
         options = webdriver.ChromeOptions()
-        options.add_argument('--headless=false') 
+        # options.add_argument('--headless=false')
         # SANGAT PENTING: Memaksa ukuran layar jadi Full HD agar tab Ulasan tidak tersembunyi
         options.add_argument('--window-size=1920,1080')
         options.add_argument('--lang=id')
         options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36')
+
+        # ==============================================================
+        # PARAMETER ANTI-CRASH & STABILISASI (Tanpa Profil Pribadi)
+        # ==============================================================
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
+        options.add_argument('--disable-gpu') # Meringankan beban kartu grafis
+        
+        # OPSI DI BAWAH INI DIMATIKAN AGAR TIDAK CRASH / NOT REACHABLE
+        # options.add_argument('--remote-debugging-port=9222')
+        # user_data_path = r"C:\Users\user\AppData\Local\Google\Chrome\User Data"
+        # options.add_argument(f"--user-data-dir={user_data_path}")
+        # options.add_argument("--profile-directory=Profile 1")
+        # ==============================================================
         
         self.driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
@@ -29,15 +43,34 @@ class GoogleMapsScraper:
             return []
             
         self.driver.get(url)
-        wait = WebDriverWait(self.driver, 15)
+        wait = WebDriverWait(self.driver, 30)
+
+        # ==============================================================
+        # [BARU] INTERVENSI MANUAL KHUSUS LOKASI YANG SENSITIF (3 MENIT)
+        # ==============================================================
+        if "Batam Centre" in location_name or "Batam Center" in location_name:
+            print(f"\n⚠️  PERHATIAN: Memasuki halaman {location_name}.")
+            print("Sistem Google mungkin meminta Login atau Persetujuan Cookie.")
+            print("Anda memiliki waktu 3 menit (100 detik) untuk menyelesaikannya secara manual di browser...")
+            
+            # Hitung mundur 100 detik (3 menit)
+            for i in range(100, 0, -1):
+                mins, secs = divmod(i, 60)
+                print(f"Sisa waktu intervensi: {mins:02d} menit {secs:02d} detik", end='\r')
+                time.sleep(1)
+            print("\n✔️  Waktu intervensi selesai. Mengambil alih kontrol browser kembali...\n")
+        else:
+            # Berikan waktu standar 5 detik untuk lokasi lain agar halaman ter-render sempurna
+            time.sleep(5)
+        # ==============================================================
 
         # 1. Tunggu dan klik tab "Ulasan"
         try:
             xpath_ulasan = """
             //button[
-                contains(@aria-label, 'Ulasan') or 
-                contains(@aria-label, 'Reviews') or 
-                .//div[contains(text(), 'Ulasan')] or 
+                contains(@aria-label, 'Ulasan') or
+                contains(@aria-label, 'Reviews') or
+                .//div[contains(text(), 'Ulasan')] or
                 .//div[contains(text(), 'Reviews')]
             ]
             """
@@ -45,7 +78,7 @@ class GoogleMapsScraper:
             self.driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", reviews_btn)
             time.sleep(1)
             self.driver.execute_script("arguments[0].click();", reviews_btn)
-            time.sleep(4) 
+            time.sleep(4)
         except Exception as e:
             print(f"[ERROR] Tab ulasan '{location_name}' tetap tidak ditemukan atau terblokir Captcha.")
             return []
@@ -57,7 +90,7 @@ class GoogleMapsScraper:
                 reviews_elements = self.driver.find_elements(By.CSS_SELECTOR, "div.jftiEf")
                 if reviews_elements:
                     self.driver.execute_script("arguments[0].scrollIntoView(true);", reviews_elements[-1])
-                    time.sleep(3) 
+                    time.sleep(3)
             except:
                 break
                 
@@ -120,13 +153,13 @@ class GoogleMapsScraper:
                 # Simpan data hanya jika ada teks ulasannya
                 if text.strip():
                     data.append({
-                        'location': location_name, 
+                        'location': location_name,
                         'reviewer_name': reviewer_name,
                         'is_local_guide': is_local_guide,
                         'contributor_info': contrib_text,
-                        'rating': rating, 
+                        'rating': rating,
                         'time': time_posted,
-                        'text': text, 
+                        'text': text,
                         'likes': int(likes), # Konversi string "12" jadi angka 12
                         'has_photo': has_photo,
                         'owner_response': owner_response
@@ -144,11 +177,12 @@ class GoogleMapsScraper:
     def run_all(self):
         all_data = []
         os.makedirs(DATA_RAW, exist_ok=True)
+        output_path = os.path.join(DATA_RAW, 'raw_reviews.csv')
         
         for loc_name, url in TARGET_LOCATIONS.items():
             print(f"\nMulai proses: {loc_name}...")
             # Setel max_scrolls ke angka besar jika ingin data banyak
-            data = self.scrape_location(loc_name, url, max_scrolls=100) 
+            data = self.scrape_location(loc_name, url, max_scrolls=100)
             all_data.extend(data)
             
         if not all_data:
@@ -156,11 +190,33 @@ class GoogleMapsScraper:
             self.driver.quit()
             return pd.DataFrame()
 
-        df = pd.DataFrame(all_data)
-        output_path = os.path.join(DATA_RAW, 'raw_reviews.csv')
-        df.to_csv(output_path, index=False)
+        df_new = pd.DataFrame(all_data)
+        
+        # ==========================================================
+        # LOGIKA PENGGABUNGAN DATA (APPEND & HAPUS DUPLIKAT)
+        # ==========================================================
+        if os.path.exists(output_path):
+            print(f"\n🔄 Menemukan data historis. Menggabungkan data baru dengan data lama...")
+            df_old = pd.read_csv(output_path)
+            
+            # Gabungkan data lama dan data baru
+            df_combined = pd.concat([df_old, df_new], ignore_index=True)
+            
+            # Hapus ulasan yang sama persis (Berdasarkan Nama, Teks, dan Lokasi)
+            # keep='last' memastikan kita menyimpan metadata scraping yang paling baru
+            df_combined = df_combined.drop_duplicates(subset=['reviewer_name', 'text', 'location'], keep='last')
+            
+            print(f"📈 Total data sebelumnya: {len(df_old)} baris")
+            print(f"📈 Total data setelah digabung: {len(df_combined)} baris")
+            df_final = df_combined
+        else:
+            df_final = df_new
+            print(f"📈 Total data baru: {len(df_final)} baris")
+
+        # Simpan kembali menimpa file lama dengan versi yang sudah diperkaya
+        df_final.to_csv(output_path, index=False)
         self.driver.quit()
-        return df
+        return df_final
 
 if __name__ == "__main__":
     scraper = GoogleMapsScraper()
