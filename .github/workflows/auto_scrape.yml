@@ -2,7 +2,9 @@ name: Weekly Scrape and Update Data
 
 on:
   schedule:
+    # Berjalan otomatis setiap hari Minggu jam 00:00 (UTC)
     - cron: '0 0 * * 0'
+  # Memungkinkan Anda menjalankan ini secara manual melalui tombol "Run workflow" di GitHub
   workflow_dispatch:
 
 jobs:
@@ -21,16 +23,32 @@ jobs:
     - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
+        # Memastikan seluruh modul (termasuk selenium, nltk, scikit-learn, dll) terinstal
         pip install -r requirements.txt
 
-    - name: Jalankan Pipeline Analytics (Scrape -> Clean -> Sentiment)
+    # ========================================================
+    # OPSIONAL: LANGKAH SCRAPING (Gunakan jika Github tidak di-block)
+    # Jika Selenium crash di Github, Anda bisa MENGHAPUS blok ini 
+    # dan bergantung pada hasil scraping lokal Anda.
+    # ========================================================
+    - name: Run Scraper (Optional)
       run: |
-        python main.py
+        python scraper/scraper.py || echo "Scraping dilewati/gagal. Lanjut ke proses NLP."
+
+    # ========================================================
+    # LANGKAH INTI: NLP, Sentimen (SVM), dan Aspek
+    # Menggunakan flag --auto agar program berjalan tanpa
+    # menunggu input ketikan (mode 3)
+    # ========================================================
+    - name: Jalankan Pipeline Analytics (Preprocess -> SVM -> Aspek)
+      run: |
+        python main.py --auto
 
     - name: Commit & Push Data Baru ke GitHub
       run: |
         git config --global user.name "github-actions[bot]"
         git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        # Memastikan folder data terdeteksi perubahannya (baik raw_reviews.csv maupun final_dataset.csv)
         git add data/
-        git commit -m "Auto-update: Data ulasan pelabuhan mingguan" || echo "Tidak ada data baru untuk di-commit"
+        git commit -m "Auto-update: Pembersihan & Prediksi Ulasan Pelabuhan Mingguan" || echo "Tidak ada data baru untuk di-commit"
         git push
