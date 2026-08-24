@@ -303,12 +303,12 @@ def show_large_plot(fig=None, plot_type="pyplot", extra_data=None):
         pivot_data = extra_data['pivot']
         fig_large, ax_large = plt.subplots(figsize=(20, 8)) 
         sns.heatmap(pivot_data, cmap='Reds', annot=True, fmt='d', 
-                    linewidths=1, ax=ax_large, annot_kws={"size": 12, "weight": "bold"})
-        ax_large.set_xlabel("Periode (Bulan)", fontsize=14, fontweight='bold', labelpad=15)
-        ax_large.set_ylabel("Terminal Feri", fontsize=14, fontweight='bold', labelpad=15)
+                    linewidths=1.5, linecolor='white', ax=ax_large, annot_kws={"size": 12, "weight": "bold"})
+        ax_large.set_xlabel("Periode Waktu (Bulan)", fontsize=14, fontweight='bold', labelpad=15)
+        ax_large.set_ylabel("Terminal Pelabuhan", fontsize=14, fontweight='bold', labelpad=15)
         ax_large.xaxis.set_major_locator(ticker.MultipleLocator(base=1))
-        plt.setp(ax_large.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor", fontsize=10)
-        plt.setp(ax_large.get_yticklabels(), rotation=0, fontsize=12)
+        plt.setp(ax_large.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor", fontsize=10, fontweight='bold')
+        plt.setp(ax_large.get_yticklabels(), rotation=0, fontsize=12, fontweight='bold')
         sns.despine(left=True, bottom=True)
         st.pyplot(fig_large, use_container_width=True)
 
@@ -481,7 +481,6 @@ else:
 
 # ==========================================
 # DEFINISI WARNA SPESIFIK UNTUK TIAP PELABUHAN
-# (Memastikan warna pada Bar Chart dan Scatter Plot identik)
 # ==========================================
 port_color_palette = [
     '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', 
@@ -494,8 +493,6 @@ for i, port in enumerate(all_ports):
 # ==========================================
 # MAIN CONTENT AREA
 # ==========================================
-
-# LOGIKA TOMBOL TOGGLE SIDEBAR DI AREA UTAMA
 col_title, col_toggle = st.columns([5, 1])
 with col_title:
     st.markdown(
@@ -554,14 +551,13 @@ with tab1:
         pop_df = df_working['pelabuhan'].value_counts().reset_index()
         pop_df.columns = ['Pelabuhan', 'Jumlah Ulasan']
         
-        # [PERBAIKAN]: Menggunakan pemetaan warna diskrit yang sama untuk Bar Chart
         fig_pop = px.bar(
             pop_df, 
             x='Jumlah Ulasan', 
             y='Pelabuhan', 
             orientation='h',
-            color='Pelabuhan', # Diubah dari 'Jumlah Ulasan' ke 'Pelabuhan'
-            color_discrete_map=port_colors, # Menggunakan palet khusus
+            color='Pelabuhan', 
+            color_discrete_map=port_colors, 
             text='Jumlah Ulasan',
             labels={'Jumlah Ulasan': 'Total Ulasan (Volume)', 'Pelabuhan': ''}
         )
@@ -574,7 +570,7 @@ with tab1:
         fig_pop.update_layout(
             height=400,
             plot_bgcolor='rgba(0,0,0,0)',
-            showlegend=False, # Menyembunyikan legenda agar tidak boros tempat
+            showlegend=False,
             margin=dict(l=0, r=20, t=20, b=0)
         )
         fig_pop.update_xaxes(showgrid=False)
@@ -592,13 +588,12 @@ with tab1:
                 Volume=('review_rating', 'count')
             ).reset_index()
 
-            # [PERBAIKAN]: Scatter plot juga menggunakan pemetaan warna yang sama
             fig_scat = px.scatter(
                 scatter_df, 
                 x='Volume', 
                 y='Rata_Rating', 
                 color='pelabuhan', 
-                color_discrete_map=port_colors, # Menggunakan palet khusus
+                color_discrete_map=port_colors, 
                 size='Volume',
                 size_max=30, 
                 labels={'Volume': 'Volume (Jumlah Ulasan)', 'Rata_Rating': 'Kualitas (Rata-rata Rating)', 'pelabuhan': 'Pelabuhan'}
@@ -634,7 +629,7 @@ with tab1:
             x='bulan_tahun', 
             y='Jumlah', 
             color='pelabuhan', 
-            color_discrete_map=port_colors, # Menyamakan warna garis tren
+            color_discrete_map=port_colors, 
             markers=True,
             line_shape='linear',
             labels={'bulan_tahun': 'Periode (Bulan)', 'Jumlah': 'Volume Ulasan', 'pelabuhan': 'Pelabuhan'}
@@ -877,16 +872,18 @@ with tab2:
                 pivot_keluhan = pivot_keluhan.reindex(index=selected_ports, fill_value=0)
                 pivot_keluhan = pivot_keluhan.loc[:, (pivot_keluhan != 0).any(axis=0)]
 
-                fig_hm, ax_hm = plt.subplots(figsize=(14, 5)) 
+                # [PERBAIKAN HEATMAP]: Ukuran figure diperlebar, ada garis putih antar sel, dan label sumbu X rapi
+                fig_hm, ax_hm = plt.subplots(figsize=(14, 6)) 
                 sns.heatmap(pivot_keluhan, cmap='Reds', annot=True, fmt='d', 
-                            linewidths=1, ax=ax_hm, annot_kws={"size": 10, "weight": "bold"})
+                            linewidths=1.5, linecolor='white', ax=ax_hm, 
+                            annot_kws={"size": 11, "weight": "bold"}, cbar_kws={'label': 'Jumlah Keluhan'})
                 
-                ax_hm.set_xlabel("Periode (Bulan)", fontsize=11, fontweight='bold', labelpad=10)
-                ax_hm.set_ylabel("Terminal Feri", fontsize=11, fontweight='bold', labelpad=10)
+                ax_hm.set_xlabel("Periode Waktu (Bulan)", fontsize=12, fontweight='bold', labelpad=12)
+                ax_hm.set_ylabel("Terminal Pelabuhan", fontsize=12, fontweight='bold', labelpad=12)
 
-                ax_hm.xaxis.set_major_locator(ticker.MultipleLocator(base=3))
-                plt.setp(ax_hm.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
-                plt.setp(ax_hm.get_yticklabels(), rotation=0)
+                # Memperbaiki rotasi dan keterbacaan label bulan di sumbu X
+                plt.setp(ax_hm.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor", fontsize=10, fontweight='bold')
+                plt.setp(ax_hm.get_yticklabels(), rotation=0, fontsize=10, fontweight='bold')
 
                 sns.despine(left=True, bottom=True)
                 st.pyplot(fig_hm, use_container_width=True)
@@ -954,10 +951,6 @@ with tab4:
     st.header("Evaluasi Kinerja Model SVM")
     st.markdown("Bagian ini menampilkan metrik performa model Support Vector Machine.")
 
-    # ==========================================================
-    # [PERBAIKAN]: MEMBACA METRIK DARI FILE JSON HASIL TRAINING
-    # ==========================================================
-    import json
     metrics_path = os.path.join('data', 'models', 'eval_metrics.json')
     
     if os.path.exists(metrics_path):
