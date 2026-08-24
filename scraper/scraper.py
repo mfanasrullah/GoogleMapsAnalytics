@@ -177,6 +177,7 @@ class GoogleMapsScraper:
     def run_all(self):
         all_data = []
         os.makedirs(DATA_RAW, exist_ok=True)
+        output_path = os.path.join(DATA_RAW, 'raw_reviews.csv')
         
         for loc_name, url in TARGET_LOCATIONS.items():
             print(f"\nMulai proses: {loc_name}...")
@@ -189,11 +190,33 @@ class GoogleMapsScraper:
             self.driver.quit()
             return pd.DataFrame()
 
-        df = pd.DataFrame(all_data)
-        output_path = os.path.join(DATA_RAW, 'raw_reviews.csv')
-        df.to_csv(output_path, index=False)
+        df_new = pd.DataFrame(all_data)
+        
+        # ==========================================================
+        # LOGIKA PENGGABUNGAN DATA (APPEND & HAPUS DUPLIKAT)
+        # ==========================================================
+        if os.path.exists(output_path):
+            print(f"\n🔄 Menemukan data historis. Menggabungkan data baru dengan data lama...")
+            df_old = pd.read_csv(output_path)
+            
+            # Gabungkan data lama dan data baru
+            df_combined = pd.concat([df_old, df_new], ignore_index=True)
+            
+            # Hapus ulasan yang sama persis (Berdasarkan Nama, Teks, dan Lokasi)
+            # keep='last' memastikan kita menyimpan metadata scraping yang paling baru
+            df_combined = df_combined.drop_duplicates(subset=['reviewer_name', 'text', 'location'], keep='last')
+            
+            print(f"📈 Total data sebelumnya: {len(df_old)} baris")
+            print(f"📈 Total data setelah digabung: {len(df_combined)} baris")
+            df_final = df_combined
+        else:
+            df_final = df_new
+            print(f"📈 Total data baru: {len(df_final)} baris")
+
+        # Simpan kembali menimpa file lama dengan versi yang sudah diperkaya
+        df_final.to_csv(output_path, index=False)
         self.driver.quit()
-        return df
+        return df_final
 
 if __name__ == "__main__":
     scraper = GoogleMapsScraper()
