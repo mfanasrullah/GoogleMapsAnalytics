@@ -32,7 +32,6 @@ if 'sidebar_state' not in st.session_state:
     st.session_state.sidebar_state = 'expanded'
 
 # Set konfigurasi halaman menggunakan nilai dari session state
-# PERBAIKAN: Menghapus tanda pagar (#) agar state ini benar-benar diterapkan ke UI
 st.set_page_config(
     page_title="Dashboard Analisis Pelabuhan", 
     layout="wide", 
@@ -321,6 +320,8 @@ def init_preprocessing_tools():
     stemmer = stemmer_factory.create_stemmer()
     stopword_factory = StopWordRemoverFactory()
     default_stopwords = stopword_factory.get_stop_words()
+    
+    # [PERBAIKAN]: Menambahkan kata terjemahan error & slang/imbuhan yang sering lolos
     custom_stopwords = [
         'menjadi', 'kemudian', 'selama', 'untuk', 'utk', 'dari', 'pada', 'di', 'ke', 'dengan', 'dalam', 'yang', 'dan', 'atau', 'tapi',
         'saya', 'kami', 'kita', 'mereka', 'orang', 'orang-orang',
@@ -331,7 +332,9 @@ def init_preprocessing_tools():
         'kapal', 'fery', 'boat', 'angkutan', 'taksi', 'ojek', 'kendaraan', 'bus',
         'hotel', 'toko', 'mall', 'mal', 'restoran', 'warung', 'toilet', 'parkir', 'parkiran',
         'terlalu', 'sangat', 'cukup', 'banyak', 'terus', 'pas', 'sendiri',
-        'imigrasi', 'petugas', 'staf', 'bea cukai', 'porter', 'tiket', 'proses', 'sistem', 'renovasi', 'antrian', 'antrean', 'covid'
+        'imigrasi', 'petugas', 'staf', 'bea cukai', 'porter', 'tiket', 'proses', 'sistem', 'renovasi', 'antrian', 'antrean', 'covid',
+        # HAPUS KATA ERROR TRANSLATE DAN KATA SAMPAH LAINNYA
+        'error', 'server', 'please', 'try', 'later', 'that', 'there', 'know', 'nya', 'yg', 'aja', 'udah', 'karena', 'kalau', 'buat'
     ]
     all_stopwords = default_stopwords + custom_stopwords
     dictionary = ArrayDictionary(all_stopwords)
@@ -808,6 +811,7 @@ with tab2:
             semua_teks = " ".join(df_working[teks_kolom].dropna().astype(str))
 
             if semua_teks.strip(): 
+                # [PERBAIKAN]: Menambahkan kata terjemahan error & slang/imbuhan yang sering lolos
                 custom_stopwords = set([
                     'menjadi', 'kemudian', 'selama', 'untuk', 'utk', 'dari', 'pada', 'di', 'ke', 'dengan', 'dalam', 'yang', 'dan', 'atau', 'tapi',
                     'saya', 'kami', 'kita', 'mereka', 'orang', 'orang-orang',
@@ -818,7 +822,9 @@ with tab2:
                     'kapal', 'fery', 'boat', 'angkutan', 'taksi', 'ojek', 'kendaraan', 'bus',
                     'hotel', 'toko', 'mall', 'mal', 'restoran', 'warung', 'toilet', 'parkir', 'parkiran',
                     'terlalu', 'sangat', 'cukup', 'banyak', 'terus', 'pas', 'sendiri',
-                    'imigrasi', 'petugas', 'staf', 'bea cukai', 'porter', 'tiket', 'proses', 'sistem', 'renovasi', 'antrian', 'antrean', 'covid'
+                    'imigrasi', 'petugas', 'staf', 'bea cukai', 'porter', 'tiket', 'proses', 'sistem', 'renovasi', 'antrian', 'antrean', 'covid',
+                    # HAPUS KATA ERROR TRANSLATE DAN KATA SAMPAH LAINNYA
+                    'error', 'server', 'please', 'try', 'later', 'that', 'there', 'know', 'nya', 'yg', 'aja', 'udah', 'karena', 'kalau', 'buat'
                 ])
 
                 wordcloud = WordCloud(
