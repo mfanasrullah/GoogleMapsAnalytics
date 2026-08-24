@@ -306,10 +306,14 @@ def show_large_plot(fig=None, plot_type="pyplot", extra_data=None):
                     linewidths=1.5, linecolor='white', ax=ax_large, annot_kws={"size": 12, "weight": "bold"})
         ax_large.set_xlabel("Periode Waktu (Bulan)", fontsize=14, fontweight='bold', labelpad=15)
         ax_large.set_ylabel("Terminal Pelabuhan", fontsize=14, fontweight='bold', labelpad=15)
-        ax_large.xaxis.set_major_locator(ticker.MultipleLocator(base=1))
-        plt.setp(ax_large.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor", fontsize=10, fontweight='bold')
+        
+        # [PERBAIKAN]: Menghapus MultipleLocator yang membuat label sumbu X hilang
+        plt.setp(ax_large.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor", fontsize=12, fontweight='bold')
         plt.setp(ax_large.get_yticklabels(), rotation=0, fontsize=12, fontweight='bold')
+        
         sns.despine(left=True, bottom=True)
+        # Tambahkan tight_layout agar label X tidak terpotong tepi layar pop-up
+        fig_large.tight_layout()
         st.pyplot(fig_large, use_container_width=True)
 
 # ==========================================
