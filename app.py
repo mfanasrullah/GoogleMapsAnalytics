@@ -12,7 +12,6 @@ from deep_translator import GoogleTranslator
 import math
 import joblib
 import numpy as np
-import random 
 import matplotlib.ticker as ticker 
 import json # Ditambahkan untuk membaca file evaluasi
 
@@ -368,30 +367,45 @@ def load_logo():
 logo_polibatam = load_logo()
 
 def parse_gmaps_time(time_str):
-    now = datetime.now()
+    # 1. Gunakan tanggal file dataset terakhir dimodifikasi sebagai patokan (Anchor Date)
+    file_path = os.path.join(DATA_PROCESSED, "final_dataset.csv")
+    try:
+        file_mtime = os.path.getmtime(file_path)
+        now = datetime.fromtimestamp(file_mtime)
+    except Exception:
+        # Jika file tidak ditemukan oleh sistem cloud, gunakan tanggal fix scraping terakhir Anda
+        now = datetime(2026, 8, 24)
+
     if pd.isna(time_str) or str(time_str).strip() == "": 
         return now
+    
     time_str = str(time_str).lower()
-    if any(x in time_str for x in ['sebulan', 'a month', '1 month']): return now - timedelta(days=30 + random.randint(-5, 5))
-    if any(x in time_str for x in ['setahun', 'a year', '1 year']): return now - timedelta(days=365 + random.randint(-15, 15))
-    if any(x in time_str for x in ['seminggu', 'a week', '1 week']): return now - timedelta(days=7 + random.randint(-2, 2))
+    
+    # 2. Hapus fungsi random.randint(...) agar tanggal 100% statis
+    if any(x in time_str for x in ['sebulan', 'a month', '1 month']): return now - timedelta(days=30)
+    if any(x in time_str for x in ['setahun', 'a year', '1 year']): return now - timedelta(days=365)
+    if any(x in time_str for x in ['seminggu', 'a week', '1 week']): return now - timedelta(days=7)
     if any(x in time_str for x in ['sehari', 'a day', '1 day']): return now - timedelta(days=1)
-    if any(x in time_str for x in ['sejam', 'an hour', '1 hour']): return now 
-    if any(x in time_str for x in ['baru saja', 'just now', 'minutes']): return now 
-    num = re.findall(r'\d+', time_str)
-    if not num: 
+    if any(x in time_str for x in ['sejam', 'an hour', '1 hour', 'baru saja', 'just now', 'minutes']): return now 
+    
+    num_match = re.findall(r'\d+', time_str)
+    if not num_match: 
         return now
-    num = int(num[0])
+    
+    num = int(num_match[0])
+    
+    # 3. Hitung presisi absolut tanpa acakan
     if 'tahun' in time_str or 'year' in time_str: 
-        return now - timedelta(days=(num*365) + random.randint(-30, 30))
+        return now - timedelta(days=num*365)
     if 'bulan' in time_str or 'month' in time_str: 
-        return now - timedelta(days=(num*30) + random.randint(-5, 5))
+        return now - timedelta(days=num*30)
     if 'minggu' in time_str or 'week' in time_str: 
-        return now - timedelta(days=(num*7) + random.randint(-2, 2))
+        return now - timedelta(days=num*7)
     if 'hari' in time_str or 'day' in time_str: 
         return now - timedelta(days=num)
     if 'jam' in time_str or 'hour' in time_str: 
         return now 
+        
     return now
 
 @st.cache_data(ttl="1d") 
