@@ -1065,7 +1065,8 @@ else:
         if not df_negatif_insight.empty and 'review_text' in df_negatif_insight.columns:
             df_sample_neg = df_negatif_insight.sort_values('tanggal', ascending=False).head(2)
             for _, row in df_sample_neg.iterrows():
-                tgl_str = row['tanggal'].strftime('%d %b %Y') if pd.notna(row['tanggal']) else "-"
+                # [PERBAIKAN]: Mengubah format '%d %b %Y' (Contoh: 01 Sep 2026) menjadi '%b %Y' (Contoh: Sep 2026)
+                tgl_str = row['tanggal'].strftime('%b %Y') if pd.notna(row['tanggal']) else "-"
                 rating_val = int(row['review_rating']) if pd.notna(row['review_rating']) else 1
                 
                 st.markdown(
