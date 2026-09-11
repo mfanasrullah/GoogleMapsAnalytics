@@ -19,8 +19,7 @@ from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
 from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory, StopWordRemover, ArrayDictionary
 
 from config import DATA_PROCESSED
-from aspect.aspect import AspectExtractor
-from aspect.summary import AspectSummarizer
+from aspect.summary import AspectSummarizer # AspectExtractor Dihapus dari impor ini karena sudah tidak dipakai di app.py
 
 sns.set_theme(style="whitegrid")
 sns.set_palette("Blues_d")
@@ -323,6 +322,7 @@ def init_preprocessing_tools():
     stopword_factory = StopWordRemoverFactory()
     default_stopwords = stopword_factory.get_stop_words()
     
+    # [PERBAIKAN]: Menggunakan daftar custom_stopwords terbaru
     custom_stopwords = [
         'menjadi', 'kemudian', 'selama', 'untuk', 'utk', 'dari', 'pada', 'di', 'ke', 'dengan', 'dalam', 'yang', 'dan', 'atau', 'tapi',
         'saya', 'kami', 'kita', 'mereka', 'orang', 'orang-orang',
@@ -334,7 +334,11 @@ def init_preprocessing_tools():
         'hotel', 'toko', 'mall', 'mal', 'restoran', 'warung', 'toilet', 'parkir', 'parkiran',
         'terlalu', 'sangat', 'cukup', 'banyak', 'terus', 'pas', 'sendiri',
         'imigrasi', 'petugas', 'staf', 'bea cukai', 'porter', 'tiket', 'proses', 'sistem', 'renovasi', 'antrian', 'antrean', 'covid',
-        'error', 'server', 'please', 'try', 'later', 'that', 'there', 'know', 'nya', 'yg', 'aja', 'udah', 'karena', 'kalau', 'buat'
+        'error', 'server', 'please', 'try', 'later', 'that', 'there', 'know', 'nya', 'yg', 'aja', 'udah', 'karena', 'kalau', 'buat',
+        's', '500', '1500', 'laku', 'tuju', 'antar', 'hubung', 'guna', 'makin',
+        'dulu', 'bandara', 'changi', 'tanah', 'merah', 'resort', 'front', 'harbourfront', 'mega', 'megamall',
+        'menyeberang', 'nyebrang', 'lewat', 'langsung',
+        'pengalaman', 'lainnya', 'biasanya', 'sebelumnya', 'akhirnya', 'memiliki', 'terdapat', 'tersedia', 'pilihan', 'berada', 'macam'
     ]
     all_stopwords = default_stopwords + custom_stopwords
     dictionary = ArrayDictionary(all_stopwords)
@@ -365,8 +369,6 @@ def load_logo():
 logo_polibatam = load_logo()
 
 def parse_gmaps_time(time_str):
-    # [PERBAIKAN KRUSIAL]: Mengunci Anchor Date secara absolut ke tanggal scraping terakhir (24 Agustus 2026)
-    # Ini memastikan bahwa setiap ulasan memiliki tanggal yang statis dan tidak akan pernah bergeser meskipun website direfresh.
     now = datetime(2026, 8, 24)
 
     if pd.isna(time_str) or str(time_str).strip() == "": 
@@ -374,7 +376,6 @@ def parse_gmaps_time(time_str):
     
     time_str = str(time_str).lower()
     
-    # Menghitung tanggal mundur tanpa fungsi acak (random)
     if any(x in time_str for x in ['sebulan', 'a month', '1 month']): return now - timedelta(days=30)
     if any(x in time_str for x in ['setahun', 'a year', '1 year']): return now - timedelta(days=365)
     if any(x in time_str for x in ['seminggu', 'a week', '1 week']): return now - timedelta(days=7)
@@ -405,16 +406,33 @@ def load_data():
     file_path = os.path.join(DATA_PROCESSED, "final_dataset.csv")
     if not os.path.exists(file_path):
         return None
+    
+    # [PERBAIKAN KRUSIAL]: Langsung membaca final_dataset.csv tanpa memanggil AspectExtractor lagi.
+    # Ini akan mempercepat loading dan mengandalkan aspek yang sudah ada di CSV.
     df = pd.read_csv(file_path)
     df = df.rename(columns={'location': 'pelabuhan', 'text': 'review_text'})
+    
     if 'rating' in df.columns:
         df['review_rating'] = df['rating'].astype(str).str.extract(r'(\d+)').astype(float)
     if 'time' in df.columns:
         df['tanggal'] = df['time'].apply(parse_gmaps_time)
         df['bulan_tahun'] = df['tanggal'].dt.to_period('M').astype(str)
-    if 'final_text' in df.columns:
-        extractor = AspectExtractor(method='rule-based')
-        df = extractor.process_dataframe(df, text_column='final_text')
+        
+    # Fungsi extractor = AspectExtractor(...) telah dihapus
+    
+    # Perbaiki tipe list untuk aspects di dataframe jika tersimpan sebagai string dari CSV
+    if 'aspects' in df.columns:
+        import ast
+        def safe_literal_eval(val):
+            if pd.isna(val): return []
+            try:
+                return ast.literal_eval(str(val))
+            except (ValueError, SyntaxError):
+                return []
+        # Jika isinya string yang terlihat seperti list "['x', 'y']", ubah jadi list beneran
+        if df['aspects'].dtype == object and len(df) > 0 and isinstance(df['aspects'].iloc[0], str) and df['aspects'].iloc[0].startswith('['):
+            df['aspects'] = df['aspects'].apply(safe_literal_eval)
+            
     return df
 
 @st.cache_resource
@@ -830,6 +848,7 @@ with tab2:
             semua_teks = " ".join(df_working[teks_kolom].dropna().astype(str))
 
             if semua_teks.strip(): 
+                # [PERBAIKAN WORDCLOUD]: Menggunakan daftar custom_stopwords terbaru + Adjectives Filter
                 custom_stopwords = set([
                     'menjadi', 'kemudian', 'selama', 'untuk', 'utk', 'dari', 'pada', 'di', 'ke', 'dengan', 'dalam', 'yang', 'dan', 'atau', 'tapi',
                     'saya', 'kami', 'kita', 'mereka', 'orang', 'orang-orang',
@@ -841,7 +860,12 @@ with tab2:
                     'hotel', 'toko', 'mall', 'mal', 'restoran', 'warung', 'toilet', 'parkir', 'parkiran',
                     'terlalu', 'sangat', 'cukup', 'banyak', 'terus', 'pas', 'sendiri',
                     'imigrasi', 'petugas', 'staf', 'bea cukai', 'porter', 'tiket', 'proses', 'sistem', 'renovasi', 'antrian', 'antrean', 'covid',
-                    'error', 'server', 'please', 'try', 'later', 'that', 'there', 'know', 'nya', 'yg', 'aja', 'udah', 'karena', 'kalau', 'buat'
+                    'error', 'server', 'please', 'try', 'later', 'that', 'there', 'know', 'nya', 'yg', 'aja', 'udah', 'karena', 'kalau', 'buat',
+                    's', '500', '1500', 'laku', 'tuju', 'antar', 'hubung', 'guna', 'makin',
+                    'dulu', 'bandara', 'changi', 'tanah', 'merah', 'resort', 'front', 'harbourfront', 'mega', 'megamall',
+                    'menyeberang', 'nyebrang', 'lewat', 'langsung',
+                    'pengalaman', 'lainnya', 'biasanya', 'sebelumnya', 'akhirnya', 'memiliki', 'terdapat', 'tersedia', 'pilihan', 'berada', 'macam',
+                    'lumayan', 'sedikit', 'kurang' # Adjectives dimasukkan KHUSUS untuk WordCloud
                 ])
 
                 wordcloud = WordCloud(
@@ -1055,7 +1079,6 @@ else:
         if not df_negatif_insight.empty and 'review_text' in df_negatif_insight.columns:
             df_sample_neg = df_negatif_insight.sort_values('tanggal', ascending=False).head(2)
             for _, row in df_sample_neg.iterrows():
-                # Menampilkan format Bulan dan Tahun saja
                 tgl_str = row['tanggal'].strftime('%b %Y') if pd.notna(row['tanggal']) else "-"
                 rating_val = int(row['review_rating']) if pd.notna(row['review_rating']) else 1
                 
