@@ -306,12 +306,10 @@ def show_large_plot(fig=None, plot_type="pyplot", extra_data=None):
         ax_large.set_xlabel("Periode Waktu (Bulan)", fontsize=14, fontweight='bold', labelpad=15)
         ax_large.set_ylabel("Terminal Pelabuhan", fontsize=14, fontweight='bold', labelpad=15)
         
-        # [PERBAIKAN]: Menghapus MultipleLocator yang membuat label sumbu X hilang
         plt.setp(ax_large.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor", fontsize=12, fontweight='bold')
         plt.setp(ax_large.get_yticklabels(), rotation=0, fontsize=12, fontweight='bold')
         
         sns.despine(left=True, bottom=True)
-        # Tambahkan tight_layout agar label X tidak terpotong tepi layar pop-up
         fig_large.tight_layout()
         st.pyplot(fig_large, use_container_width=True)
 
@@ -367,21 +365,16 @@ def load_logo():
 logo_polibatam = load_logo()
 
 def parse_gmaps_time(time_str):
-    # 1. Gunakan tanggal file dataset terakhir dimodifikasi sebagai patokan (Anchor Date)
-    file_path = os.path.join(DATA_PROCESSED, "final_dataset.csv")
-    try:
-        file_mtime = os.path.getmtime(file_path)
-        now = datetime.fromtimestamp(file_mtime)
-    except Exception:
-        # Jika file tidak ditemukan oleh sistem cloud, gunakan tanggal fix scraping terakhir Anda
-        now = datetime(2026, 8, 24)
+    # [PERBAIKAN KRUSIAL]: Mengunci Anchor Date secara absolut ke tanggal scraping terakhir (24 Agustus 2026)
+    # Ini memastikan bahwa setiap ulasan memiliki tanggal yang statis dan tidak akan pernah bergeser meskipun website direfresh.
+    now = datetime(2026, 8, 24)
 
     if pd.isna(time_str) or str(time_str).strip() == "": 
         return now
     
     time_str = str(time_str).lower()
     
-    # 2. Hapus fungsi random.randint(...) agar tanggal 100% statis
+    # Menghitung tanggal mundur tanpa fungsi acak (random)
     if any(x in time_str for x in ['sebulan', 'a month', '1 month']): return now - timedelta(days=30)
     if any(x in time_str for x in ['setahun', 'a year', '1 year']): return now - timedelta(days=365)
     if any(x in time_str for x in ['seminggu', 'a week', '1 week']): return now - timedelta(days=7)
@@ -394,7 +387,6 @@ def parse_gmaps_time(time_str):
     
     num = int(num_match[0])
     
-    # 3. Hitung presisi absolut tanpa acakan
     if 'tahun' in time_str or 'year' in time_str: 
         return now - timedelta(days=num*365)
     if 'bulan' in time_str or 'month' in time_str: 
@@ -890,7 +882,6 @@ with tab2:
                 pivot_keluhan = pivot_keluhan.reindex(index=selected_ports, fill_value=0)
                 pivot_keluhan = pivot_keluhan.loc[:, (pivot_keluhan != 0).any(axis=0)]
 
-                # [PERBAIKAN HEATMAP]: Ukuran figure diperlebar, ada garis putih antar sel, dan label sumbu X rapi
                 fig_hm, ax_hm = plt.subplots(figsize=(14, 6)) 
                 sns.heatmap(pivot_keluhan, cmap='Reds', annot=True, fmt='d', 
                             linewidths=1.5, linecolor='white', ax=ax_hm, 
@@ -899,7 +890,6 @@ with tab2:
                 ax_hm.set_xlabel("Periode Waktu (Bulan)", fontsize=12, fontweight='bold', labelpad=12)
                 ax_hm.set_ylabel("Terminal Pelabuhan", fontsize=12, fontweight='bold', labelpad=12)
 
-                # Memperbaiki rotasi dan keterbacaan label bulan di sumbu X
                 plt.setp(ax_hm.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor", fontsize=10, fontweight='bold')
                 plt.setp(ax_hm.get_yticklabels(), rotation=0, fontsize=10, fontweight='bold')
 
@@ -1065,7 +1055,7 @@ else:
         if not df_negatif_insight.empty and 'review_text' in df_negatif_insight.columns:
             df_sample_neg = df_negatif_insight.sort_values('tanggal', ascending=False).head(2)
             for _, row in df_sample_neg.iterrows():
-                # [PERBAIKAN]: Mengubah format '%d %b %Y' (Contoh: 01 Sep 2026) menjadi '%b %Y' (Contoh: Sep 2026)
+                # Menampilkan format Bulan dan Tahun saja
                 tgl_str = row['tanggal'].strftime('%b %Y') if pd.notna(row['tanggal']) else "-"
                 rating_val = int(row['review_rating']) if pd.notna(row['review_rating']) else 1
                 
