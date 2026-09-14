@@ -13,13 +13,14 @@ import math
 import joblib
 import numpy as np
 import matplotlib.ticker as ticker 
-import json # Ditambahkan untuk membaca file evaluasi
+import json
+import ast
 
 from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
 from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory, StopWordRemover, ArrayDictionary
 
 from config import DATA_PROCESSED
-from aspect.summary import AspectSummarizer # AspectExtractor Dihapus dari impor ini karena sudah tidak dipakai di app.py
+from aspect.summary import AspectSummarizer
 
 sns.set_theme(style="whitegrid")
 sns.set_palette("Blues_d")
@@ -30,7 +31,7 @@ sns.set_palette("Blues_d")
 if 'sidebar_state' not in st.session_state:
     st.session_state.sidebar_state = 'expanded'
 
-# Set konfigurasi halaman menggunakan nilai dari session state
+# Set konfigurasi halaman
 st.set_page_config(
     page_title="Dashboard Analisis Pelabuhan", 
     layout="wide", 
@@ -41,8 +42,6 @@ responsive_css = """
 <style>
     /* ============================================================
        DESIGN SYSTEM — "Harbor Analytics"
-       Tema maritim (pelabuhan & feri): Ocean Navy -> Harbor Blue -> Tide Teal
-       Font: Sora (judul) + Inter (isi/UI) + IBM Plex Mono (angka data)
     ============================================================ */
     @import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600;700&display=swap');
 
@@ -69,7 +68,6 @@ responsive_css = """
         letter-spacing: -0.01em;
     }
 
-    /* ---------- Layout dasar & responsivitas umum ---------- */
     .block-container {
         padding-top: 1.4rem;
         padding-bottom: 3rem;
@@ -85,11 +83,6 @@ responsive_css = """
     hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(10,38,71,0.15), transparent); margin: 1.6rem 0; }
     ::selection { background: var(--tide-teal); color: white; }
 
-    @media (prefers-reduced-motion: reduce) {
-        * { animation: none !important; transition: none !important; }
-    }
-
-    /* ---------- Hero banner (elemen signature halaman) ---------- */
     @keyframes tideShift {
         0%, 100% { background-position: 0% 50%; }
         50% { background-position: 100% 50%; }
@@ -141,7 +134,6 @@ responsive_css = """
         position: relative; z-index: 1;
     }
 
-    /* ---------- Kartu KPI ---------- */
     .kpi-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
@@ -174,7 +166,6 @@ responsive_css = """
     .kpi-label { font-size: clamp(0.68rem, 1.8vw, 0.8rem); color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 0.15rem; }
     .kpi-value { font-family: 'IBM Plex Mono', monospace; font-size: clamp(1.2rem, 3.2vw, 1.65rem); font-weight: 600; color: var(--ocean-deep); }
 
-    /* ---------- st.metric bawaan (dipakai di tab Evaluasi Model) ---------- */
     div[data-testid="metric-container"] {
         background: white;
         border-radius: 14px;
@@ -190,7 +181,6 @@ responsive_css = """
     }
     div[data-testid="metric-container"] label { color: var(--muted) !important; }
 
-    /* ---------- Tab ---------- */
     .stTabs [data-baseweb="tab-list"] {
         gap: 6px;
         overflow-x: auto;
@@ -212,7 +202,6 @@ responsive_css = """
         color: white !important;
     }
 
-    /* ---------- Tombol (termasuk toggle sidebar kustom) ---------- */
     .stButton>button {
         border-radius: 10px;
         font-weight: 600;
@@ -234,20 +223,16 @@ responsive_css = """
         color: white !important;
     }
 
-    /* ---------- Progress bar (hasil prediksi SVM) ---------- */
     .stProgress > div > div > div { border-radius: 10px; background-color: #E3ECEF; }
     .stProgress > div > div > div > div { background: linear-gradient(90deg, var(--ocean-mid), var(--tide-teal)); border-radius: 10px; }
 
-    /* ---------- Sidebar ---------- */
     section[data-testid="stSidebar"] {
         background: linear-gradient(180deg, var(--foam) 0%, #DCEEF0 100%);
         border-right: 1px solid rgba(10,38,71,0.08);
     }
 
-    /* ---------- Tag terpilih pada multiselect ---------- */
     span[data-baseweb="tag"] { background-color: var(--tide-teal) !important; }
 
-    /* ---------- Kartu insight & expander ---------- */
     .insight-card {
         background: white;
         border-radius: 14px;
@@ -262,12 +247,10 @@ responsive_css = """
     }
     [data-testid="stExpander"] { border-radius: 14px !important; overflow: hidden; border: 1px solid rgba(10,38,71,0.08) !important; }
 
-    /* ---------- Responsif: Tablet ---------- */
     @media (max-width: 992px) {
         .kpi-grid { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
     }
 
-    /* ---------- Responsif: Mobile (HP portrait & landscape sempit) ---------- */
     @media (max-width: 640px) {
         .block-container { padding-left: 0.6rem; padding-right: 0.6rem; padding-top: 0.8rem; }
         .kpi-grid { grid-template-columns: 1fr; gap: 0.65rem; }
@@ -275,7 +258,6 @@ responsive_css = """
         .stTabs [data-baseweb="tab"] { padding: 0.45rem 0.75rem; }
     }
 
-    /* ---------- Responsif: HP posisi landscape (tinggi layar pendek) ---------- */
     @media (max-height: 480px) and (orientation: landscape) {
         .block-container { padding-top: 0.5rem; padding-bottom: 1rem; }
         .hero-banner { padding: 0.6rem 1.1rem 1rem; margin-bottom: 0.6rem; }
@@ -322,7 +304,6 @@ def init_preprocessing_tools():
     stopword_factory = StopWordRemoverFactory()
     default_stopwords = stopword_factory.get_stop_words()
     
-    # [PERBAIKAN]: Menggunakan daftar custom_stopwords terbaru
     custom_stopwords = [
         'menjadi', 'kemudian', 'selama', 'untuk', 'utk', 'dari', 'pada', 'di', 'ke', 'dengan', 'dalam', 'yang', 'dan', 'atau', 'tapi',
         'saya', 'kami', 'kita', 'mereka', 'orang', 'orang-orang',
@@ -407,8 +388,6 @@ def load_data():
     if not os.path.exists(file_path):
         return None
     
-    # [PERBAIKAN KRUSIAL]: Langsung membaca final_dataset.csv tanpa memanggil AspectExtractor lagi.
-    # Ini akan mempercepat loading dan mengandalkan aspek yang sudah ada di CSV.
     df = pd.read_csv(file_path)
     df = df.rename(columns={'location': 'pelabuhan', 'text': 'review_text'})
     
@@ -418,20 +397,21 @@ def load_data():
         df['tanggal'] = df['time'].apply(parse_gmaps_time)
         df['bulan_tahun'] = df['tanggal'].dt.to_period('M').astype(str)
         
-    # Fungsi extractor = AspectExtractor(...) telah dihapus
-    
-    # Perbaiki tipe list untuk aspects di dataframe jika tersimpan sebagai string dari CSV
+    # [PERBAIKAN KRUSIAL]: Konversi teks string dari CSV menjadi List asli Python 
     if 'aspects' in df.columns:
-        import ast
-        def safe_literal_eval(val):
-            if pd.isna(val): return []
-            try:
-                return ast.literal_eval(str(val))
-            except (ValueError, SyntaxError):
+        def convert_to_list(val):
+            if pd.isna(val) or str(val).strip() == "":
                 return []
-        # Jika isinya string yang terlihat seperti list "['x', 'y']", ubah jadi list beneran
-        if df['aspects'].dtype == object and len(df) > 0 and isinstance(df['aspects'].iloc[0], str) and df['aspects'].iloc[0].startswith('['):
-            df['aspects'] = df['aspects'].apply(safe_literal_eval)
+            val_str = str(val).strip()
+            if val_str.startswith('[') and val_str.endswith(']'):
+                try:
+                    return ast.literal_eval(val_str)
+                except (ValueError, SyntaxError):
+                    return []
+            else:
+                return [val_str]
+                
+        df['aspects'] = df['aspects'].apply(convert_to_list)
             
     return df
 
@@ -749,10 +729,10 @@ with tab1:
     st.write("Pantau kapan suatu aspek sering dibicarakan untuk memprediksi potensi masalah di masa depan berdasarkan tren bulan-bulan sebelumnya.")
 
     if 'aspects' in df_working.columns and 'bulan_tahun' in df_working.columns:
-
         df_trend_base = df_working.copy()
 
-        if not df_trend_base.empty and isinstance(df_trend_base['aspects'].iloc[0], list):
+        # [PERBAIKAN KRUSIAL]: Memaksa explode aspek tanpa syarat karena tipe datanya sudah dipastikan list di load_data
+        if not df_trend_base.empty:
             df_trend_base = df_trend_base.explode('aspects')
 
         unique_aspects = [asp for asp in df_trend_base['aspects'].unique() if pd.notna(asp) and str(asp).strip() != ""]
@@ -848,7 +828,6 @@ with tab2:
             semua_teks = " ".join(df_working[teks_kolom].dropna().astype(str))
 
             if semua_teks.strip(): 
-                # [PERBAIKAN WORDCLOUD]: Menggunakan daftar custom_stopwords terbaru + Adjectives Filter
                 custom_stopwords = set([
                     'menjadi', 'kemudian', 'selama', 'untuk', 'utk', 'dari', 'pada', 'di', 'ke', 'dengan', 'dalam', 'yang', 'dan', 'atau', 'tapi',
                     'saya', 'kami', 'kita', 'mereka', 'orang', 'orang-orang',
@@ -865,7 +844,7 @@ with tab2:
                     'dulu', 'bandara', 'changi', 'tanah', 'merah', 'resort', 'front', 'harbourfront', 'mega', 'megamall',
                     'menyeberang', 'nyebrang', 'lewat', 'langsung',
                     'pengalaman', 'lainnya', 'biasanya', 'sebelumnya', 'akhirnya', 'memiliki', 'terdapat', 'tersedia', 'pilihan', 'berada', 'macam',
-                    'lumayan', 'sedikit', 'kurang' # Adjectives dimasukkan KHUSUS untuk WordCloud
+                    'lumayan', 'sedikit', 'kurang'
                 ])
 
                 wordcloud = WordCloud(
