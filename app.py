@@ -306,7 +306,7 @@ def init_preprocessing_tools():
     
     custom_stopwords = [
         'menjadi', 'kemudian', 'selama', 'untuk', 'utk', 'dari', 'pada', 'di', 'ke', 'dengan', 'dalam', 'yang', 'dan', 'atau', 'tapi',
-        'saya', 'kami', 'kita', 'mereka', 'orang', 'orang-orang',
+        'saya', 'kami', 'kita', 'mereka', 'orang', 'orang-orang', 'org',
         'tiba', 'kedatangan', 'berangkat', 'keberangkatan', 'perjalanan', 'waktu', 'jadwal', 'hari', 'pagi', 'malam',
         'lakukan', 'melakukan', 'ambil', 'mengambil', 'beri', 'memberikan', 'minta', 'bertanya', 'tahu', 'lihat', 'melihat', 'pakai', 'pake', 'bilang', 'kata', 'mengatakan', 'miliki', 'punya', 'ada',
         'batam', 'nongsa', 'karimun', 'dumai', 'kepri', 'johor', 'singapura',
@@ -319,7 +319,21 @@ def init_preprocessing_tools():
         's', '500', '1500', 'laku', 'tuju', 'antar', 'hubung', 'guna', 'makin',
         'dulu', 'bandara', 'changi', 'tanah', 'merah', 'resort', 'front', 'harbourfront', 'mega', 'megamall',
         'menyeberang', 'nyebrang', 'lewat', 'langsung',
-        'pengalaman', 'lainnya', 'biasanya', 'sebelumnya', 'akhirnya', 'memiliki', 'terdapat', 'tersedia', 'pilihan', 'berada', 'macam'
+        'pengalaman', 'lainnya', 'biasanya', 'sebelumnya', 'akhirnya', 'memiliki', 'terdapat', 'tersedia', 'pilihan', 'berada', 'macam',
+        
+        # --- TAMBAHAN STOPWORD BARU ---
+        'dah', 'sdh',
+        'tersebut', 'merupakan', 'terjadi', 'diberikan', 'kembali',
+        'terasa', 'terlihat', 'termasuk', 'terhadap', 'melalui', 'sehingga', 'menang', 'pekan', 'anak', 'kamu',
+        'namun', 'maupun', 'malah', 'padahal', 'meski', 'meskipun',
+        'mulai', 'tetap', 'sama',
+        'bagian', 'sebuah', 'suatu', 'setiap', 'seluruh',
+        'disini', 'disana', 'disitu', 'demikian',
+        'berikut', 'umumnya', 'memang', 'bahkan',
+        'hampir', 'kadang', 'sering',
+        'awalnya', 'nantinya',
+        'sekedar', 'sekadar', 'tentang', 'antara', 'hingga',
+        'serta', 'yakni', 'yaitu', 'adapun', 'merasa', 'mohon'
     ]
     all_stopwords = default_stopwords + custom_stopwords
     dictionary = ArrayDictionary(all_stopwords)
@@ -397,7 +411,6 @@ def load_data():
         df['tanggal'] = df['time'].apply(parse_gmaps_time)
         df['bulan_tahun'] = df['tanggal'].dt.to_period('M').astype(str)
         
-    # [PERBAIKAN KRUSIAL]: Konversi teks string dari CSV menjadi List asli Python 
     if 'aspects' in df.columns:
         def convert_to_list(val):
             if pd.isna(val) or str(val).strip() == "":
@@ -731,7 +744,6 @@ with tab1:
     if 'aspects' in df_working.columns and 'bulan_tahun' in df_working.columns:
         df_trend_base = df_working.copy()
 
-        # [PERBAIKAN KRUSIAL]: Memaksa explode aspek tanpa syarat karena tipe datanya sudah dipastikan list di load_data
         if not df_trend_base.empty:
             df_trend_base = df_trend_base.explode('aspects')
 
@@ -830,7 +842,7 @@ with tab2:
             if semua_teks.strip(): 
                 custom_stopwords = set([
                     'menjadi', 'kemudian', 'selama', 'untuk', 'utk', 'dari', 'pada', 'di', 'ke', 'dengan', 'dalam', 'yang', 'dan', 'atau', 'tapi',
-                    'saya', 'kami', 'kita', 'mereka', 'orang', 'orang-orang',
+                    'saya', 'kami', 'kita', 'mereka', 'orang', 'orang-orang', 'org',
                     'tiba', 'kedatangan', 'berangkat', 'keberangkatan', 'perjalanan', 'waktu', 'jadwal', 'hari', 'pagi', 'malam',
                     'lakukan', 'melakukan', 'ambil', 'mengambil', 'beri', 'memberikan', 'minta', 'bertanya', 'tahu', 'lihat', 'melihat', 'pakai', 'pake', 'bilang', 'kata', 'mengatakan', 'miliki', 'punya', 'ada',
                     'batam', 'nongsa', 'karimun', 'dumai', 'kepri', 'johor', 'singapura',
@@ -844,7 +856,22 @@ with tab2:
                     'dulu', 'bandara', 'changi', 'tanah', 'merah', 'resort', 'front', 'harbourfront', 'mega', 'megamall',
                     'menyeberang', 'nyebrang', 'lewat', 'langsung',
                     'pengalaman', 'lainnya', 'biasanya', 'sebelumnya', 'akhirnya', 'memiliki', 'terdapat', 'tersedia', 'pilihan', 'berada', 'macam',
-                    'lumayan', 'sedikit', 'kurang'
+                    
+                    # --- TAMBAHAN STOPWORD BARU ---
+                    'dah', 'sdh',
+                    'tersebut', 'merupakan', 'terjadi', 'diberikan', 'kembali',
+                    'terasa', 'terlihat', 'termasuk', 'terhadap', 'melalui', 'sehingga', 'menang', 'pekan', 'anak', 'kamu',
+                    'namun', 'maupun', 'malah', 'padahal', 'meski', 'meskipun',
+                    'mulai', 'tetap', 'sama',
+                    'bagian', 'sebuah', 'suatu', 'setiap', 'seluruh',
+                    'disini', 'disana', 'disitu', 'demikian',
+                    'berikut', 'umumnya', 'memang', 'bahkan',
+                    'hampir', 'kadang', 'sering',
+                    'awalnya', 'nantinya',
+                    'sekedar', 'sekadar', 'tentang', 'antara', 'hingga',
+                    'serta', 'yakni', 'yaitu', 'adapun', 'merasa', 'mohon',
+                    
+                    'lumayan', 'sedikit', 'kurang' # Adjectives dimasukkan KHUSUS untuk WordCloud
                 ])
 
                 wordcloud = WordCloud(
