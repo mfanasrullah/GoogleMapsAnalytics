@@ -5,7 +5,6 @@ from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
 from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory
 from deep_translator import GoogleTranslator
 from langdetect import detect, DetectorFactory
-from stopwords_wordcloud import WORDCLOUD_STOPWORDS
 
 DetectorFactory.seed = 0 
 
@@ -64,20 +63,7 @@ class TextPreprocessor:
         }
         
         self.all_stopwords = self.base_stopwords.union(self.custom_stopwords)
-
-        # --- STOPWORD KHUSUS WORDCLOUD ---
-        # Dipisah dari self.all_stopwords agar TIDAK mempengaruhi final_text
-        # (yang dipakai untuk training/predict model SVM & ekstraksi aspek).
-        # Diambil dari stopwords_wordcloud.py (single source of truth, dipakai
-        # bersama oleh app.py) supaya kedua sisi selalu konsisten & mudah
-        # diupdate. Daftar ini dioptimalkan khusus untuk WordCloud pada riset
-        # "Analisis Sentimen Pelabuhan": membuang kata fungsi (ID & EN), nama
-        # lokasi/instansi, dan istilah logistik/prosedural yang sudah
-        # terwakili di grafik Aspek, sambil MEMPERTAHANKAN kata sentimen/
-        # kualitas (bagus, nyaman, bersih, rude, corruption, dst).
-        self.wordcloud_stopwords = self.all_stopwords.union(WORDCLOUD_STOPWORDS)
-        # ----------------------------------
-
+        
         self.slang_dict = {
             'bgus': 'bagus', 'bgt': 'banget', 'bgs': 'bagus', 'brg': 'barang',
             'klo': 'kalau', 'klw': 'kalau', 'gmn': 'bagaimana', 'gmna': 'bagaimana',
@@ -146,17 +132,10 @@ class TextPreprocessor:
     def wordcloud_pipeline(self, text):
         """
         Pipa Tahap 3: Khusus untuk WordCloud.
-        Membuang stopword versi WordCloud (lebih luas & sesuai topik riset
-        pelabuhan) TANPA melakukan stemming agar makna kata tidak distorsi.
-        Juga membuang token yang terlalu pendek (<3 huruf) yang biasanya
-        sisa-sisa kontraksi/simbol (mis. 'a', 'i', 's', 't') hasil translasi.
+        Hanya membuang stopwords TANPA melakukan stemming agar makna kata tidak distorsi.
         """
-        words = text.split()
-        filtered_words = [
-            w for w in words
-            if w not in self.wordcloud_stopwords and len(w) >= 3
-        ]
-        return ' '.join(filtered_words)
+        text = self.remove_stopwords(text)
+        return text
     # ----------------------------------
 
     def process_dataframe(self, df, text_col='text'):
