@@ -321,19 +321,38 @@ def init_preprocessing_tools():
         'menyeberang', 'nyebrang', 'lewat', 'langsung',
         'pengalaman', 'lainnya', 'biasanya', 'sebelumnya', 'akhirnya', 'memiliki', 'terdapat', 'tersedia', 'pilihan', 'berada', 'macam',
         
-        # --- TAMBAHAN STOPWORD BARU ---
-        'dah', 'sdh',
+        # --- TAMBAHAN STOPWORD INDONESIA BARU ---
+        'dah', 'sdh', 'cuman', 'kayak', 'kalo', 'banget', 'sekali',
         'tersebut', 'merupakan', 'terjadi', 'diberikan', 'kembali',
         'terasa', 'terlihat', 'termasuk', 'terhadap', 'melalui', 'sehingga', 'menang', 'pekan', 'anak', 'kamu',
         'namun', 'maupun', 'malah', 'padahal', 'meski', 'meskipun',
-        'mulai', 'tetap', 'sama',
+        'mulai', 'tetap', 'sama', 'selesai', 'pembangunan', 'perubahan', 'kondisi', 'suasana', 'pemandangan',
         'bagian', 'sebuah', 'suatu', 'setiap', 'seluruh',
         'disini', 'disana', 'disitu', 'demikian',
         'berikut', 'umumnya', 'memang', 'bahkan',
         'hampir', 'kadang', 'sering',
-        'awalnya', 'nantinya',
+        'awalnya', 'nantinya', 'sekarang', 'lagi',
         'sekedar', 'sekadar', 'tentang', 'antara', 'hingga',
-        'serta', 'yakni', 'yaitu', 'adapun', 'merasa', 'mohon'
+        'serta', 'yakni', 'yaitu', 'adapun', 'merasa', 'mohon',
+        'menggunakan', 'pembelian', 'penjualan', 'berbagai',
+        
+        # --- TAMBAHAN STOPWORD BAHASA INGGRIS MASSAL ---
+        'one', 'also', 'get', 'take', 'people', 'waiting', 'officer', 'need', 'service', 
+        'shop', 'airport', 'even', 'want', 'look', 'far', 'still', 'passenger', 'taxis', 'ship', 
+        'time', 'minute', 'much', 'around', 'near', 'island', 'available',
+        'crowded', 'very', 'just', 'only', 'really', 'well', 'way', 'make', 'day',
+        'first', 'back', 'go', 'going', 'come', 'coming', 'like', 'would', 'could', 'should',
+        'us', 'we', 'they', 'them', 'their', 'our', 'my', 'me', 'he', 'she', 'it', 'is', 'are', 'was', 'were',
+        'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'doing', 'a', 'an', 'the',
+        'and', 'but', 'if', 'or', 'because', 'as', 'until', 'while', 'of', 'at', 'by', 'for', 'with',
+        'about', 'against', 'between', 'into', 'through', 'during', 'before', 'after', 'above', 'below',
+        'to', 'from', 'up', 'down', 'in', 'out', 'on', 'off', 'over', 'under', 'again', 'further',
+        'then', 'once', 'here', 'when', 'where', 'why', 'how', 'all', 'any', 'both', 'each',
+        'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'own', 'same', 'so',
+        'than', 'too', 'can', 'will', 'don', 'now', 'd', 'll', 'm', 'o', 're', 've', 'y', 'ain', 'aren',
+        'staff', 'ferry', 'terminal', 'batam', 'singapore', 'bintan', 'port', 'customs', 'custom', 'immigration',
+        'experience', 'trip', 'journey', 'travel', 'facilities', 'facility', 'ticket', 'tickets', 'price',
+        'building', 'place', 'location', 'area', 'room', 'toilet', 'car', 'parking', 'food', 'drink', 'water'
     ]
     all_stopwords = default_stopwords + custom_stopwords
     dictionary = ArrayDictionary(all_stopwords)
@@ -840,6 +859,7 @@ with tab2:
             semua_teks = " ".join(df_working[teks_kolom].dropna().astype(str))
 
             if semua_teks.strip(): 
+                # --- TAMBAHAN STOPWORD GABUNGAN UNTUK WORDCLOUD ---
                 custom_stopwords = set([
                     'menjadi', 'kemudian', 'selama', 'untuk', 'utk', 'dari', 'pada', 'di', 'ke', 'dengan', 'dalam', 'yang', 'dan', 'atau', 'tapi',
                     'saya', 'kami', 'kita', 'mereka', 'orang', 'orang-orang', 'org',
@@ -857,19 +877,38 @@ with tab2:
                     'menyeberang', 'nyebrang', 'lewat', 'langsung',
                     'pengalaman', 'lainnya', 'biasanya', 'sebelumnya', 'akhirnya', 'memiliki', 'terdapat', 'tersedia', 'pilihan', 'berada', 'macam',
                     
-                    # --- TAMBAHAN STOPWORD BARU ---
-                    'dah', 'sdh',
+                    # Stopword Indonesia Baru
+                    'dah', 'sdh', 'cuman', 'kayak', 'kalo', 'banget', 'sekali',
                     'tersebut', 'merupakan', 'terjadi', 'diberikan', 'kembali',
                     'terasa', 'terlihat', 'termasuk', 'terhadap', 'melalui', 'sehingga', 'menang', 'pekan', 'anak', 'kamu',
                     'namun', 'maupun', 'malah', 'padahal', 'meski', 'meskipun',
-                    'mulai', 'tetap', 'sama',
+                    'mulai', 'tetap', 'sama', 'selesai', 'pembangunan', 'perubahan', 'kondisi', 'suasana', 'pemandangan',
                     'bagian', 'sebuah', 'suatu', 'setiap', 'seluruh',
                     'disini', 'disana', 'disitu', 'demikian',
                     'berikut', 'umumnya', 'memang', 'bahkan',
                     'hampir', 'kadang', 'sering',
-                    'awalnya', 'nantinya',
+                    'awalnya', 'nantinya', 'sekarang', 'lagi',
                     'sekedar', 'sekadar', 'tentang', 'antara', 'hingga',
                     'serta', 'yakni', 'yaitu', 'adapun', 'merasa', 'mohon',
+                    'menggunakan', 'pembelian', 'penjualan', 'berbagai',
+                    
+                    # Stopword English Massal
+                    'one', 'also', 'get', 'take', 'people', 'waiting', 'officer', 'need', 'service', 
+                    'shop', 'airport', 'even', 'want', 'look', 'far', 'still', 'passenger', 'taxis', 'ship', 
+                    'time', 'minute', 'much', 'around', 'near', 'island', 'available',
+                    'crowded', 'very', 'just', 'only', 'really', 'well', 'way', 'make', 'day',
+                    'first', 'back', 'go', 'going', 'come', 'coming', 'like', 'would', 'could', 'should',
+                    'us', 'we', 'they', 'them', 'their', 'our', 'my', 'me', 'he', 'she', 'it', 'is', 'are', 'was', 'were',
+                    'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'doing', 'a', 'an', 'the',
+                    'and', 'but', 'if', 'or', 'because', 'as', 'until', 'while', 'of', 'at', 'by', 'for', 'with',
+                    'about', 'against', 'between', 'into', 'through', 'during', 'before', 'after', 'above', 'below',
+                    'to', 'from', 'up', 'down', 'in', 'out', 'on', 'off', 'over', 'under', 'again', 'further',
+                    'then', 'once', 'here', 'when', 'where', 'why', 'how', 'all', 'any', 'both', 'each',
+                    'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'own', 'same', 'so',
+                    'than', 'too', 'can', 'will', 'don', 'now', 'd', 'll', 'm', 'o', 're', 've', 'y', 'ain', 'aren',
+                    'staff', 'ferry', 'terminal', 'batam', 'singapore', 'bintan', 'port', 'customs', 'custom', 'immigration',
+                    'experience', 'trip', 'journey', 'travel', 'facilities', 'facility', 'ticket', 'tickets', 'price',
+                    'building', 'place', 'location', 'area', 'room', 'toilet', 'car', 'parking', 'food', 'drink', 'water',
                     
                     'lumayan', 'sedikit', 'kurang' # Adjectives dimasukkan KHUSUS untuk WordCloud
                 ])
