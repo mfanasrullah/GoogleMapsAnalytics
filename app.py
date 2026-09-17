@@ -12,13 +12,11 @@ from deep_translator import GoogleTranslator
 import math
 import joblib
 import numpy as np
-import matplotlib.ticker as ticker 
 import json
 import ast
 
 from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
 from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory, StopWordRemover, ArrayDictionary
-
 from config import DATA_PROCESSED
 from aspect.summary import AspectSummarizer
 
@@ -31,7 +29,6 @@ sns.set_palette("Blues_d")
 if 'sidebar_state' not in st.session_state:
     st.session_state.sidebar_state = 'expanded'
 
-# Set konfigurasi halaman
 st.set_page_config(
     page_title="Dashboard Analisis Pelabuhan", 
     layout="wide", 
@@ -40,9 +37,6 @@ st.set_page_config(
 
 responsive_css = """
 <style>
-    /* ============================================================
-       DESIGN SYSTEM — "Harbor Analytics"
-    ============================================================ */
     @import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600;700&display=swap');
 
     :root {
@@ -57,220 +51,61 @@ responsive_css = """
         --card-shadow-hover: 0 10px 28px rgba(10, 38, 71, 0.16);
     }
 
-    .stApp {
-        background: linear-gradient(180deg, var(--foam) 0%, var(--sand) 55%, #FFFFFF 100%);
-        font-family: 'Inter', sans-serif;
-        color: var(--ink);
-    }
-    .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6 {
-        font-family: 'Sora', sans-serif !important;
-        color: var(--ocean-deep);
-        letter-spacing: -0.01em;
-    }
-
-    .block-container {
-        padding-top: 1.4rem;
-        padding-bottom: 3rem;
-        padding-left: clamp(0.75rem, 3vw, 2.5rem);
-        padding-right: clamp(0.75rem, 3vw, 2.5rem);
-        max-width: 1440px;
-    }
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-    [data-testid="stToolbar"] {visibility: hidden;}
-
+    .stApp { background: linear-gradient(180deg, var(--foam) 0%, var(--sand) 55%, #FFFFFF 100%); font-family: 'Inter', sans-serif; color: var(--ink); }
+    .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6 { font-family: 'Sora', sans-serif !important; color: var(--ocean-deep); letter-spacing: -0.01em; }
+    .block-container { padding-top: 1.4rem; padding-bottom: 3rem; padding-left: clamp(0.75rem, 3vw, 2.5rem); padding-right: clamp(0.75rem, 3vw, 2.5rem); max-width: 1440px; }
+    #MainMenu, footer, header, [data-testid="stToolbar"] {visibility: hidden;}
     hr { border: none; height: 1px; background: linear-gradient(90deg, transparent, rgba(10,38,71,0.15), transparent); margin: 1.6rem 0; }
     ::selection { background: var(--tide-teal); color: white; }
 
-    @keyframes tideShift {
-        0%, 100% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-    }
-    @keyframes fadeInUp {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
+    @keyframes tideShift { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    
     .hero-banner {
-        position: relative;
-        overflow: hidden;
-        background: linear-gradient(120deg, var(--ocean-deep) 0%, var(--ocean-mid) 45%, var(--tide-teal) 100%);
-        background-size: 200% 200%;
-        animation: tideShift 14s ease-in-out infinite;
-        border-radius: 20px;
-        padding: clamp(1.1rem, 4vw, 2rem) clamp(1.2rem, 4vw, 2.4rem) clamp(1.6rem, 5vw, 2.6rem);
-        margin-bottom: 1.3rem;
-        box-shadow: var(--card-shadow);
-        color: white;
+        position: relative; overflow: hidden; background: linear-gradient(120deg, var(--ocean-deep) 0%, var(--ocean-mid) 45%, var(--tide-teal) 100%);
+        background-size: 200% 200%; animation: tideShift 14s ease-in-out infinite; border-radius: 20px;
+        padding: clamp(1.1rem, 4vw, 2rem) clamp(1.2rem, 4vw, 2.4rem) clamp(1.6rem, 5vw, 2.6rem); margin-bottom: 1.3rem; box-shadow: var(--card-shadow); color: white;
     }
-    .hero-banner::after {
-        content: "⚓";
-        position: absolute;
-        right: 0.5rem;
-        top: -1.2rem;
-        font-size: clamp(4rem, 12vw, 7rem);
-        opacity: 0.10;
-    }
-    .hero-banner::before {
-        content: "";
-        position: absolute; left: 0; right: 0; bottom: 0; height: 20px;
-        background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 60' preserveAspectRatio='none'%3E%3Cpath d='M0,30 C300,60 900,0 1200,30 L1200,60 L0,60 Z' fill='rgba(255,255,255,0.14)'/%3E%3C/svg%3E") repeat-x;
-        background-size: 500px 20px;
-    }
-    .hero-title {
-        font-family: 'Sora', sans-serif !important;
-        font-weight: 700;
-        font-size: clamp(1.3rem, 3.6vw, 2.1rem);
-        margin: 0;
-        line-height: 1.25;
-        color: white !important;
-        position: relative; z-index: 1;
-    }
-    .hero-subtitle {
-        font-size: clamp(0.78rem, 2vw, 0.98rem);
-        opacity: 0.92;
-        margin-top: 0.35rem;
-        font-weight: 400;
-        position: relative; z-index: 1;
-    }
+    .hero-banner::after { content: "⚓"; position: absolute; right: 0.5rem; top: -1.2rem; font-size: clamp(4rem, 12vw, 7rem); opacity: 0.10; }
+    .hero-title { font-family: 'Sora', sans-serif !important; font-weight: 700; font-size: clamp(1.3rem, 3.6vw, 2.1rem); margin: 0; line-height: 1.25; color: white !important; position: relative; z-index: 1; }
+    .hero-subtitle { font-size: clamp(0.78rem, 2vw, 0.98rem); opacity: 0.92; margin-top: 0.35rem; font-weight: 400; position: relative; z-index: 1; }
 
-    .kpi-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-        gap: 1rem;
-        margin-bottom: 0.4rem;
-    }
-    .kpi-card {
-        background: white;
-        border-radius: 16px;
-        padding: 1.1rem 1.3rem;
-        box-shadow: var(--card-shadow);
-        border: 1px solid rgba(10,38,71,0.06);
-        display: flex;
-        align-items: center;
-        gap: 0.9rem;
-        transition: transform 0.25s ease, box-shadow 0.25s ease;
-        animation: fadeInUp 0.5s ease-out both;
-    }
-    .kpi-card:nth-of-type(2) { animation-delay: 0.08s; }
-    .kpi-card:nth-of-type(3) { animation-delay: 0.16s; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; margin-bottom: 0.4rem; }
+    .kpi-card { background: white; border-radius: 16px; padding: 1.1rem 1.3rem; box-shadow: var(--card-shadow); border: 1px solid rgba(10,38,71,0.06); display: flex; align-items: center; gap: 0.9rem; transition: transform 0.25s ease, box-shadow 0.25s ease; animation: fadeInUp 0.5s ease-out both; }
     .kpi-card:hover { transform: translateY(-3px); box-shadow: var(--card-shadow-hover); }
-    .kpi-icon {
-        flex-shrink: 0;
-        width: 48px; height: 48px;
-        border-radius: 12px;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 1.5rem;
-        background: linear-gradient(135deg, var(--ocean-mid), var(--tide-teal));
-    }
+    .kpi-icon { flex-shrink: 0; width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; background: linear-gradient(135deg, var(--ocean-mid), var(--tide-teal)); }
     .kpi-label { font-size: clamp(0.68rem, 1.8vw, 0.8rem); color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 0.15rem; }
     .kpi-value { font-family: 'IBM Plex Mono', monospace; font-size: clamp(1.2rem, 3.2vw, 1.65rem); font-weight: 600; color: var(--ocean-deep); }
 
-    div[data-testid="metric-container"] {
-        background: white;
-        border-radius: 14px;
-        padding: 0.9rem 1.1rem;
-        box-shadow: var(--card-shadow);
-        border: 1px solid rgba(10,38,71,0.06);
-    }
-    div[data-testid="metric-container"] > div > div {
-        font-family: 'IBM Plex Mono', monospace;
-        font-size: clamp(1.05rem, 2.8vw, 1.5rem) !important;
-        word-wrap: break-word;
-        color: var(--ocean-deep);
-    }
+    div[data-testid="metric-container"] { background: white; border-radius: 14px; padding: 0.9rem 1.1rem; box-shadow: var(--card-shadow); border: 1px solid rgba(10,38,71,0.06); }
+    div[data-testid="metric-container"] > div > div { font-family: 'IBM Plex Mono', monospace; font-size: clamp(1.05rem, 2.8vw, 1.5rem) !important; word-wrap: break-word; color: var(--ocean-deep); }
     div[data-testid="metric-container"] label { color: var(--muted) !important; }
 
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 6px;
-        overflow-x: auto;
-        flex-wrap: nowrap;
-        background: var(--foam);
-        padding: 6px;
-        border-radius: 14px;
-    }
-    .stTabs [data-baseweb="tab"] {
-        border-radius: 10px;
-        padding: 0.55rem 1.1rem;
-        font-weight: 600;
-        font-size: clamp(0.76rem, 2vw, 0.92rem);
-        white-space: nowrap;
-        transition: all 0.2s ease;
-    }
-    .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, var(--ocean-deep), var(--tide-teal)) !important;
-        color: white !important;
-    }
+    .stTabs [data-baseweb="tab-list"] { gap: 6px; overflow-x: auto; flex-wrap: nowrap; background: var(--foam); padding: 6px; border-radius: 14px; }
+    .stTabs [data-baseweb="tab"] { border-radius: 10px; padding: 0.55rem 1.1rem; font-weight: 600; font-size: clamp(0.76rem, 2vw, 0.92rem); white-space: nowrap; transition: all 0.2s ease; }
+    .stTabs [aria-selected="true"] { background: linear-gradient(135deg, var(--ocean-deep), var(--tide-teal)) !important; color: white !important; }
 
-    .stButton>button {
-        border-radius: 10px;
-        font-weight: 600;
-        min-height: 42px;
-        border: 1px solid rgba(10,38,71,0.15);
-        transition: all 0.2s ease;
-        margin-top: 0;
-        margin-bottom: 0.5rem;
-    }
-    .stButton>button:hover {
-        border-color: var(--tide-teal);
-        color: var(--tide-teal);
-        transform: translateY(-1px);
-        box-shadow: 0 4px 10px rgba(44,159,163,0.18);
-    }
-    .stButton>button[kind="primary"] {
-        background: linear-gradient(135deg, var(--ocean-deep), var(--tide-teal)) !important;
-        border: none !important;
-        color: white !important;
-    }
+    .stButton>button { border-radius: 10px; font-weight: 600; min-height: 42px; border: 1px solid rgba(10,38,71,0.15); transition: all 0.2s ease; margin-top: 0; margin-bottom: 0.5rem; }
+    .stButton>button:hover { border-color: var(--tide-teal); color: var(--tide-teal); transform: translateY(-1px); box-shadow: 0 4px 10px rgba(44,159,163,0.18); }
+    .stButton>button[kind="primary"] { background: linear-gradient(135deg, var(--ocean-deep), var(--tide-teal)) !important; border: none !important; color: white !important; }
 
     .stProgress > div > div > div { border-radius: 10px; background-color: #E3ECEF; }
     .stProgress > div > div > div > div { background: linear-gradient(90deg, var(--ocean-mid), var(--tide-teal)); border-radius: 10px; }
 
-    section[data-testid="stSidebar"] {
-        background: linear-gradient(180deg, var(--foam) 0%, #DCEEF0 100%);
-        border-right: 1px solid rgba(10,38,71,0.08);
-    }
-
+    section[data-testid="stSidebar"] { background: linear-gradient(180deg, var(--foam) 0%, #DCEEF0 100%); border-right: 1px solid rgba(10,38,71,0.08); }
     span[data-baseweb="tag"] { background-color: var(--tide-teal) !important; }
 
-    .insight-card {
-        background: white;
-        border-radius: 14px;
-        padding: 1rem 1.3rem;
-        box-shadow: var(--card-shadow);
-        border-left: 4px solid var(--tide-teal);
-        margin-bottom: 0.7rem;
-        font-size: clamp(0.8rem, 1.9vw, 0.94rem);
-        line-height: 1.65;
-        color: var(--ink);
-        animation: fadeInUp 0.5s ease-out both;
-    }
+    .insight-card { background: white; border-radius: 14px; padding: 1rem 1.3rem; box-shadow: var(--card-shadow); border-left: 4px solid var(--tide-teal); margin-bottom: 0.7rem; font-size: clamp(0.8rem, 1.9vw, 0.94rem); line-height: 1.65; color: var(--ink); animation: fadeInUp 0.5s ease-out both; }
     [data-testid="stExpander"] { border-radius: 14px !important; overflow: hidden; border: 1px solid rgba(10,38,71,0.08) !important; }
 
-    @media (max-width: 992px) {
-        .kpi-grid { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
-    }
-
-    @media (max-width: 640px) {
-        .block-container { padding-left: 0.6rem; padding-right: 0.6rem; padding-top: 0.8rem; }
-        .kpi-grid { grid-template-columns: 1fr; gap: 0.65rem; }
-        .hero-banner { border-radius: 14px; }
-        .stTabs [data-baseweb="tab"] { padding: 0.45rem 0.75rem; }
-    }
-
-    @media (max-height: 480px) and (orientation: landscape) {
-        .block-container { padding-top: 0.5rem; padding-bottom: 1rem; }
-        .hero-banner { padding: 0.6rem 1.1rem 1rem; margin-bottom: 0.6rem; }
-        .hero-subtitle { display: none; }
-        .kpi-grid { grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
-        .kpi-card { padding: 0.6rem 0.8rem; }
-    }
+    @media (max-width: 992px) { .kpi-grid { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); } }
+    @media (max-width: 640px) { .block-container { padding-left: 0.6rem; padding-right: 0.6rem; padding-top: 0.8rem; } .kpi-grid { grid-template-columns: 1fr; gap: 0.65rem; } .hero-banner { border-radius: 14px; } .stTabs [data-baseweb="tab"] { padding: 0.45rem 0.75rem; } }
 </style>
 """
 st.markdown(responsive_css, unsafe_allow_html=True)
 
 # ==========================================
-# FITUR BARU: FUNGSI POP-UP DIAGRAM BESAR
+# FUNGSI POP-UP DIAGRAM BESAR
 # ==========================================
 @st.dialog("Tampilan Diagram Diperbesar", width="large")
 def show_large_plot(fig=None, plot_type="pyplot", extra_data=None):
@@ -286,10 +121,8 @@ def show_large_plot(fig=None, plot_type="pyplot", extra_data=None):
                     linewidths=1.5, linecolor='white', ax=ax_large, annot_kws={"size": 12, "weight": "bold"})
         ax_large.set_xlabel("Periode Waktu (Bulan)", fontsize=14, fontweight='bold', labelpad=15)
         ax_large.set_ylabel("Terminal Pelabuhan", fontsize=14, fontweight='bold', labelpad=15)
-        
         plt.setp(ax_large.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor", fontsize=12, fontweight='bold')
         plt.setp(ax_large.get_yticklabels(), rotation=0, fontsize=12, fontweight='bold')
-        
         sns.despine(left=True, bottom=True)
         fig_large.tight_layout()
         st.pyplot(fig_large, use_container_width=True)
@@ -304,55 +137,21 @@ def init_preprocessing_tools():
     stopword_factory = StopWordRemoverFactory()
     default_stopwords = stopword_factory.get_stop_words()
     
+    # Custom stopwords hanya digunakan untuk pemrosesan teks uji SVM real-time
     custom_stopwords = [
         'menjadi', 'kemudian', 'selama', 'untuk', 'utk', 'dari', 'pada', 'di', 'ke', 'dengan', 'dalam', 'yang', 'dan', 'atau', 'tapi',
-        'saya', 'kami', 'kita', 'mereka', 'orang', 'orang-orang', 'org',
-        'tiba', 'kedatangan', 'berangkat', 'keberangkatan', 'perjalanan', 'waktu', 'jadwal', 'hari', 'pagi', 'malam',
+        'saya', 'kami', 'kita', 'mereka', 'orang', 'orang-orang', 'org', 'tiba', 'kedatangan', 'berangkat', 'keberangkatan', 'perjalanan', 'waktu', 'jadwal', 'hari', 'pagi', 'malam',
         'lakukan', 'melakukan', 'ambil', 'mengambil', 'beri', 'memberikan', 'minta', 'bertanya', 'tahu', 'lihat', 'melihat', 'pakai', 'pake', 'bilang', 'kata', 'mengatakan', 'miliki', 'punya', 'ada',
-        'batam', 'nongsa', 'karimun', 'dumai', 'kepri', 'johor', 'singapura',
-        'pelabuhan', 'terminal', 'dermaga', 'pintu', 'jalur', 'rute',
-        'kapal', 'fery', 'boat', 'angkutan', 'taksi', 'ojek', 'kendaraan', 'bus',
-        'hotel', 'toko', 'mall', 'mal', 'restoran', 'warung', 'toilet', 'parkir', 'parkiran',
-        'terlalu', 'sangat', 'cukup', 'banyak', 'terus', 'pas', 'sendiri',
-        'imigrasi', 'petugas', 'staf', 'bea cukai', 'porter', 'tiket', 'proses', 'sistem', 'renovasi', 'antrian', 'antrean', 'covid',
+        'batam', 'nongsa', 'karimun', 'dumai', 'kepri', 'johor', 'singapura', 'pelabuhan', 'terminal', 'dermaga', 'pintu', 'jalur', 'rute',
+        'kapal', 'fery', 'boat', 'angkutan', 'taksi', 'ojek', 'kendaraan', 'bus', 'hotel', 'toko', 'mall', 'mal', 'restoran', 'warung', 'toilet', 'parkir', 'parkiran',
+        'terlalu', 'sangat', 'cukup', 'banyak', 'terus', 'pas', 'sendiri', 'imigrasi', 'petugas', 'staf', 'bea cukai', 'porter', 'tiket', 'proses', 'sistem', 'renovasi', 'antrian', 'antrean', 'covid',
         'error', 'server', 'please', 'try', 'later', 'that', 'there', 'know', 'nya', 'yg', 'aja', 'udah', 'karena', 'kalau', 'buat',
-        's', '500', '1500', 'laku', 'tuju', 'antar', 'hubung', 'guna', 'makin',
-        'dulu', 'bandara', 'changi', 'tanah', 'merah', 'resort', 'front', 'harbourfront', 'mega', 'megamall',
-        'menyeberang', 'nyebrang', 'lewat', 'langsung',
-        'pengalaman', 'lainnya', 'biasanya', 'sebelumnya', 'akhirnya', 'memiliki', 'terdapat', 'tersedia', 'pilihan', 'berada', 'macam',
-        
-        # --- TAMBAHAN STOPWORD INDONESIA BARU ---
-        'dah', 'sdh', 'cuman', 'kayak', 'kalo', 'banget', 'sekali',
-        'tersebut', 'merupakan', 'terjadi', 'diberikan', 'kembali',
-        'terasa', 'terlihat', 'termasuk', 'terhadap', 'melalui', 'sehingga', 'menang', 'pekan', 'anak', 'kamu',
-        'namun', 'maupun', 'malah', 'padahal', 'meski', 'meskipun',
-        'mulai', 'tetap', 'sama', 'selesai', 'pembangunan', 'perubahan', 'kondisi', 'suasana', 'pemandangan',
-        'bagian', 'sebuah', 'suatu', 'setiap', 'seluruh',
-        'disini', 'disana', 'disitu', 'demikian',
-        'berikut', 'umumnya', 'memang', 'bahkan',
-        'hampir', 'kadang', 'sering',
-        'awalnya', 'nantinya', 'sekarang', 'lagi',
-        'sekedar', 'sekadar', 'tentang', 'antara', 'hingga',
-        'serta', 'yakni', 'yaitu', 'adapun', 'merasa', 'mohon',
-        'menggunakan', 'pembelian', 'penjualan', 'berbagai',
-        
-        # --- TAMBAHAN STOPWORD BAHASA INGGRIS MASSAL ---
-        'one', 'also', 'get', 'take', 'people', 'waiting', 'officer', 'need', 'service', 
-        'shop', 'airport', 'even', 'want', 'look', 'far', 'still', 'passenger', 'taxis', 'ship', 
-        'time', 'minute', 'much', 'around', 'near', 'island', 'available',
-        'crowded', 'very', 'just', 'only', 'really', 'well', 'way', 'make', 'day',
-        'first', 'back', 'go', 'going', 'come', 'coming', 'like', 'would', 'could', 'should',
-        'us', 'we', 'they', 'them', 'their', 'our', 'my', 'me', 'he', 'she', 'it', 'is', 'are', 'was', 'were',
-        'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'doing', 'a', 'an', 'the',
-        'and', 'but', 'if', 'or', 'because', 'as', 'until', 'while', 'of', 'at', 'by', 'for', 'with',
-        'about', 'against', 'between', 'into', 'through', 'during', 'before', 'after', 'above', 'below',
-        'to', 'from', 'up', 'down', 'in', 'out', 'on', 'off', 'over', 'under', 'again', 'further',
-        'then', 'once', 'here', 'when', 'where', 'why', 'how', 'all', 'any', 'both', 'each',
-        'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'own', 'same', 'so',
-        'than', 'too', 'can', 'will', 'don', 'now', 'd', 'll', 'm', 'o', 're', 've', 'y', 'ain', 'aren',
-        'staff', 'ferry', 'terminal', 'batam', 'singapore', 'bintan', 'port', 'customs', 'custom', 'immigration',
-        'experience', 'trip', 'journey', 'travel', 'facilities', 'facility', 'ticket', 'tickets', 'price',
-        'building', 'place', 'location', 'area', 'room', 'toilet', 'car', 'parking', 'food', 'drink', 'water'
+        's', '500', '1500', 'laku', 'tuju', 'antar', 'hubung', 'guna', 'makin', 'dulu', 'bandara', 'changi', 'tanah', 'merah', 'resort', 'front', 'harbourfront', 'mega', 'megamall',
+        'menyeberang', 'nyebrang', 'lewat', 'langsung', 'pengalaman', 'lainnya', 'biasanya', 'sebelumnya', 'akhirnya', 'memiliki', 'terdapat', 'tersedia', 'pilihan', 'berada', 'macam',
+        'dah', 'sdh', 'tersebut', 'merupakan', 'terjadi', 'diberikan', 'kembali', 'terasa', 'terlihat', 'termasuk', 'terhadap', 'melalui', 'sehingga', 'menang', 'pekan', 'anak', 'kamu',
+        'namun', 'maupun', 'malah', 'padahal', 'meski', 'meskipun', 'mulai', 'tetap', 'sama', 'bagian', 'sebuah', 'suatu', 'setiap', 'seluruh',
+        'disini', 'disana', 'disitu', 'demikian', 'berikut', 'umumnya', 'memang', 'bahkan', 'hampir', 'kadang', 'sering',
+        'awalnya', 'nantinya', 'sekedar', 'sekadar', 'tentang', 'antara', 'hingga', 'serta', 'yakni', 'yaitu', 'adapun', 'merasa', 'mohon'
     ]
     all_stopwords = default_stopwords + custom_stopwords
     dictionary = ArrayDictionary(all_stopwords)
@@ -372,24 +171,16 @@ def preprocess_text_svm(text):
 def load_logo():
     logo_path = 'image_0.png' 
     try:
-        image = PILImage.open(logo_path)
-        return image
+        return PILImage.open(logo_path)
     except FileNotFoundError:
-        logo_url = "https://www.polibatam.ac.id/wp-content/uploads/2024/01/cropped-cropped-cropped-02_Logo_1_Utama_Polibatam_Horizontal@2x.png"
-        return logo_url
-    except Exception:
-        return None
+        return "https://www.polibatam.ac.id/wp-content/uploads/2024/01/cropped-cropped-cropped-02_Logo_1_Utama_Polibatam_Horizontal@2x.png"
 
 logo_polibatam = load_logo()
 
 def parse_gmaps_time(time_str):
     now = datetime(2026, 8, 24)
-
-    if pd.isna(time_str) or str(time_str).strip() == "": 
-        return now
-    
+    if pd.isna(time_str) or str(time_str).strip() == "": return now
     time_str = str(time_str).lower()
-    
     if any(x in time_str for x in ['sebulan', 'a month', '1 month']): return now - timedelta(days=30)
     if any(x in time_str for x in ['setahun', 'a year', '1 year']): return now - timedelta(days=365)
     if any(x in time_str for x in ['seminggu', 'a week', '1 week']): return now - timedelta(days=7)
@@ -397,29 +188,20 @@ def parse_gmaps_time(time_str):
     if any(x in time_str for x in ['sejam', 'an hour', '1 hour', 'baru saja', 'just now', 'minutes']): return now 
     
     num_match = re.findall(r'\d+', time_str)
-    if not num_match: 
-        return now
-    
+    if not num_match: return now
     num = int(num_match[0])
     
-    if 'tahun' in time_str or 'year' in time_str: 
-        return now - timedelta(days=num*365)
-    if 'bulan' in time_str or 'month' in time_str: 
-        return now - timedelta(days=num*30)
-    if 'minggu' in time_str or 'week' in time_str: 
-        return now - timedelta(days=num*7)
-    if 'hari' in time_str or 'day' in time_str: 
-        return now - timedelta(days=num)
-    if 'jam' in time_str or 'hour' in time_str: 
-        return now 
-        
+    if 'tahun' in time_str or 'year' in time_str: return now - timedelta(days=num*365)
+    if 'bulan' in time_str or 'month' in time_str: return now - timedelta(days=num*30)
+    if 'minggu' in time_str or 'week' in time_str: return now - timedelta(days=num*7)
+    if 'hari' in time_str or 'day' in time_str: return now - timedelta(days=num)
+    if 'jam' in time_str or 'hour' in time_str: return now 
     return now
 
 @st.cache_data(ttl="1d") 
 def load_data():
     file_path = os.path.join(DATA_PROCESSED, "final_dataset.csv")
-    if not os.path.exists(file_path):
-        return None
+    if not os.path.exists(file_path): return None
     
     df = pd.read_csv(file_path)
     df = df.rename(columns={'location': 'pelabuhan', 'text': 'review_text'})
@@ -432,19 +214,14 @@ def load_data():
         
     if 'aspects' in df.columns:
         def convert_to_list(val):
-            if pd.isna(val) or str(val).strip() == "":
-                return []
+            if pd.isna(val) or str(val).strip() == "": return []
             val_str = str(val).strip()
             if val_str.startswith('[') and val_str.endswith(']'):
-                try:
-                    return ast.literal_eval(val_str)
-                except (ValueError, SyntaxError):
-                    return []
+                try: return ast.literal_eval(val_str)
+                except (ValueError, SyntaxError): return []
             else:
                 return [val_str]
-                
         df['aspects'] = df['aspects'].apply(convert_to_list)
-            
     return df
 
 @st.cache_resource
@@ -464,7 +241,7 @@ if df_full is None or df_full.empty:
     st.stop()
 
 # ==========================================
-# SIDEBAR
+# SIDEBAR & FILTERING
 # ==========================================
 with st.sidebar:
     if logo_polibatam:
@@ -477,81 +254,52 @@ with st.sidebar:
         st.write("**[POLIBATAM]**")
 
     st.markdown("## Pusat Data Pelabuhan")
-
     if st.button("🔄 Segarkan Data Sekarang", use_container_width=True):
         st.cache_data.clear()
         st.cache_resource.clear()
         st.rerun()
 
     st.markdown("---")
-    st.markdown("#### 🏢 Pilih Pelabuhan")
     all_ports = df_full['pelabuhan'].unique().tolist()
-    selected_ports = st.multiselect(
-        "Pilih Pelabuhan:",
-        options=all_ports,
-        default=all_ports 
-    )
+    selected_ports = st.multiselect("Pilih Pelabuhan:", options=all_ports, default=all_ports)
 
     st.markdown("#### Pilih Rentang Tanggal")
     min_date = df_full['tanggal'].min().date()
     max_date = df_full['tanggal'].max().date()
 
     col_date1, col_date2 = st.columns(2)
-    with col_date1:
-        start_date = st.date_input("📅 Mulai", value=min_date, min_value=min_date, max_value=max_date)
-    with col_date2:
-        end_date = st.date_input("📅 Akhir", value=max_date, min_value=min_date, max_value=max_date)
+    with col_date1: start_date = st.date_input("📅 Mulai", value=min_date, min_value=min_date, max_value=max_date)
+    with col_date2: end_date = st.date_input("📅 Akhir", value=max_date, min_value=min_date, max_value=max_date)
 
-    if start_date > end_date:
-        st.error("⚠️ Tgl Mulai tidak boleh melewati Tgl Akhir!")
-
+    if start_date > end_date: st.error("⚠️ Tgl Mulai tidak boleh melewati Tgl Akhir!")
     st.markdown("---")
     st.markdown("<small>Dikembangkan oleh Tim Analitik Polibatam</small>", unsafe_allow_html=True)
 
-
 df_working = df_full[df_full['pelabuhan'].isin(selected_ports)]
-
 if start_date <= end_date:
-    df_working = df_working[
-        (df_working['tanggal'].dt.date >= start_date) & 
-        (df_working['tanggal'].dt.date <= end_date)
-    ]
+    df_working = df_working[(df_working['tanggal'].dt.date >= start_date) & (df_working['tanggal'].dt.date <= end_date)]
 else:
     df_working = pd.DataFrame(columns=df_full.columns) 
 
-# ==========================================
-# DEFINISI WARNA SPESIFIK UNTUK TIAP PELABUHAN
-# ==========================================
-port_color_palette = [
-    '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', 
-    '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
-]
-port_colors = {}
-for i, port in enumerate(all_ports):
-    port_colors[port] = port_color_palette[i % len(port_color_palette)]
+port_color_palette = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+port_colors = {port: port_color_palette[i % len(port_color_palette)] for i, port in enumerate(all_ports)}
 
 # ==========================================
 # MAIN CONTENT AREA
 # ==========================================
 col_title, col_toggle = st.columns([5, 1])
 with col_title:
-    st.markdown(
-        """
+    st.markdown("""
         <div class="hero-banner">
             <p class="hero-title">Dashboard Analisis Sentimen Pelabuhan</p>
             <p class="hero-subtitle">Powered by Tim Analitik Polibatam — Pemantauan Ulasan Pelanggan Berbasis Kecerdasan Buatan</p>
         </div>
-        """,
-        unsafe_allow_html=True
-    )
+        """, unsafe_allow_html=True)
 
 with col_toggle:
     btn_label = "⏩ Tampilkan Sidebar" if st.session_state.sidebar_state == 'collapsed' else "⏪ Sembunyikan Sidebar"
     if st.button(btn_label, use_container_width=True):
-        if st.session_state.sidebar_state == 'expanded':
-            st.session_state.sidebar_state = 'collapsed'
-        else:
-            st.session_state.sidebar_state = 'expanded'
+        st.session_state.sidebar_state = 'collapsed' if st.session_state.sidebar_state == 'expanded' else 'expanded'
         st.rerun()
 
 st.markdown("---")
@@ -560,201 +308,72 @@ if df_working.empty:
     st.warning("⚠️ Tidak ada data pelabuhan yang dipilih atau sesuai rentang waktu. Sesuaikan filter di sidebar.")
     st.stop()
 
-
 kpi_col1, kpi_col2, kpi_col3 = st.columns(3)
-
 total_reviews = len(df_working)
 avg_rating = df_working['review_rating'].mean() if 'review_rating' in df_working.columns else 0
 ports_counted = df_working['pelabuhan'].nunique()
 
-with kpi_col1:
-    st.metric(label="Total Volume Ulasan", value=f"{total_reviews:,}")
-with kpi_col2:
-    st.metric(label="Rata-rata Rating (Bintang)", value=f"{avg_rating:.1f} ⭐")
-with kpi_col3:
-    st.metric(label="Pelabuhan Teranalisis", value=f"{ports_counted}")
+with kpi_col1: st.metric(label="Total Volume Ulasan", value=f"{total_reviews:,}")
+with kpi_col2: st.metric(label="Rata-rata Rating (Bintang)", value=f"{avg_rating:.1f} ⭐")
+with kpi_col3: st.metric(label="Pelabuhan Teranalisis", value=f"{ports_counted}")
 
 st.markdown("---")
 
-tab1, tab2, tab3, tab4 = st.tabs([
-    "📊 Visualisasi Data", 
-    "☁️ WordCloud & Heatmap", 
-    "🤖 Prediksi Sentimen (SVM)",
-    "📈 Evaluasi Model"
-])
+tab1, tab2, tab3, tab4 = st.tabs(["📊 Visualisasi Data", "☁️ WordCloud & Heatmap", "🤖 Prediksi Sentimen (SVM)", "📈 Evaluasi Model"])
 
 with tab1:
     col1, col2 = st.columns(2)
-
     with col1:
         st.markdown("#### Distribusi Popularitas")
         pop_df = df_working['pelabuhan'].value_counts().reset_index()
         pop_df.columns = ['Pelabuhan', 'Jumlah Ulasan']
-        
-        fig_pop = px.bar(
-            pop_df, 
-            x='Jumlah Ulasan', 
-            y='Pelabuhan', 
-            orientation='h',
-            color='Pelabuhan', 
-            color_discrete_map=port_colors, 
-            text='Jumlah Ulasan',
-            labels={'Jumlah Ulasan': 'Total Ulasan (Volume)', 'Pelabuhan': ''}
-        )
-        
-        fig_pop.update_traces(
-            hovertemplate="<b>%{y}</b><br>Terdapat %{x} ulasan yang masuk di pelabuhan ini.<extra></extra>",
-            textposition='outside'
-        )
-        
-        fig_pop.update_layout(
-            height=400,
-            plot_bgcolor='rgba(0,0,0,0)',
-            showlegend=False,
-            margin=dict(l=0, r=20, t=20, b=0)
-        )
+        fig_pop = px.bar(pop_df, x='Jumlah Ulasan', y='Pelabuhan', orientation='h', color='Pelabuhan', color_discrete_map=port_colors, text='Jumlah Ulasan', labels={'Jumlah Ulasan': 'Total Ulasan (Volume)', 'Pelabuhan': ''})
+        fig_pop.update_traces(hovertemplate="<b>%{y}</b><br>Terdapat %{x} ulasan yang masuk di pelabuhan ini.<extra></extra>", textposition='outside')
+        fig_pop.update_layout(height=400, plot_bgcolor='rgba(0,0,0,0)', showlegend=False, margin=dict(l=0, r=20, t=20, b=0))
         fig_pop.update_xaxes(showgrid=False)
         fig_pop.update_yaxes(categoryorder='total ascending')
-
         st.plotly_chart(fig_pop, use_container_width=True)
-        if st.button("🔍 Perbesar Diagram Popularitas", key="pop_btn"):
-            show_large_plot(fig_pop, "plotly")
+        if st.button("🔍 Perbesar Diagram Popularitas", key="pop_btn"): show_large_plot(fig_pop, "plotly")
 
     with col2:
         st.markdown("#### Kualitas (Rating) vs Volume")
         if 'review_rating' in df_working.columns:
-            scatter_df = df_working.groupby('pelabuhan').agg(
-                Rata_Rating=('review_rating', 'mean'),
-                Volume=('review_rating', 'count')
-            ).reset_index()
-
-            fig_scat = px.scatter(
-                scatter_df, 
-                x='Volume', 
-                y='Rata_Rating', 
-                color='pelabuhan', 
-                color_discrete_map=port_colors, 
-                size='Volume',
-                size_max=30, 
-                labels={'Volume': 'Volume (Jumlah Ulasan)', 'Rata_Rating': 'Kualitas (Rata-rata Rating)', 'pelabuhan': 'Pelabuhan'}
-            )
-
-            fig_scat.update_traces(
-                hovertemplate="<b>%{customdata[0]}</b><br>Rata-rata Rating: %{y:.2f} Bintang<br>Total Ulasan: %{x}<extra></extra>",
-                customdata=scatter_df[['pelabuhan']]
-            )
-
-            fig_scat.update_layout(
-                height=400,
-                plot_bgcolor='rgba(0,0,0,0)',
-                yaxis=dict(range=[1, 5.5], showgrid=True, gridcolor='#EEEEEE'),
-                xaxis=dict(showgrid=True, gridcolor='#EEEEEE'),
-                margin=dict(l=0, r=0, t=20, b=0),
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-            )
-
+            scatter_df = df_working.groupby('pelabuhan').agg(Rata_Rating=('review_rating', 'mean'), Volume=('review_rating', 'count')).reset_index()
+            fig_scat = px.scatter(scatter_df, x='Volume', y='Rata_Rating', color='pelabuhan', color_discrete_map=port_colors, size='Volume', size_max=30, labels={'Volume': 'Volume (Jumlah Ulasan)', 'Rata_Rating': 'Kualitas (Rata-rata Rating)', 'pelabuhan': 'Pelabuhan'})
+            fig_scat.update_traces(hovertemplate="<b>%{customdata[0]}</b><br>Rata-rata Rating: %{y:.2f} Bintang<br>Total Ulasan: %{x}<extra></extra>", customdata=scatter_df[['pelabuhan']])
+            fig_scat.update_layout(height=400, plot_bgcolor='rgba(0,0,0,0)', yaxis=dict(range=[1, 5.5], showgrid=True, gridcolor='#EEEEEE'), xaxis=dict(showgrid=True, gridcolor='#EEEEEE'), margin=dict(l=0, r=0, t=20, b=0), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
             st.plotly_chart(fig_scat, use_container_width=True)
-            if st.button("🔍 Perbesar Diagram Kualitas", key="scat_btn"):
-                show_large_plot(fig_scat, "plotly")
+            if st.button("🔍 Perbesar Diagram Kualitas", key="scat_btn"): show_large_plot(fig_scat, "plotly")
 
     st.markdown("---")
-
     st.markdown("#### Tren Volume Ulasan per Bulan")
     if 'bulan_tahun' in df_working.columns:
         trend_df = df_working.groupby(['bulan_tahun', 'pelabuhan']).size().reset_index(name='Jumlah')
         trend_df = trend_df.sort_values('bulan_tahun')
-
-        fig_trend = px.line(
-            trend_df, 
-            x='bulan_tahun', 
-            y='Jumlah', 
-            color='pelabuhan', 
-            color_discrete_map=port_colors, 
-            markers=True,
-            line_shape='linear',
-            labels={'bulan_tahun': 'Periode (Bulan)', 'Jumlah': 'Volume Ulasan', 'pelabuhan': 'Pelabuhan'}
-        )
-
-        fig_trend.update_traces(
-            hovertemplate="<b>%{customdata[0]}</b><br>Bulan: %{x}<br>Jumlah Ulasan: %{y}<extra></extra>",
-            customdata=trend_df[['pelabuhan']]
-        )
-
-        fig_trend.update_layout(
-            height=400,
-            plot_bgcolor='rgba(0,0,0,0)',
-            hovermode="x unified", 
-            yaxis=dict(showgrid=True, gridcolor='#EEEEEE'),
-            xaxis=dict(showgrid=False, tickangle=-45),
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-        )
-
+        fig_trend = px.line(trend_df, x='bulan_tahun', y='Jumlah', color='pelabuhan', color_discrete_map=port_colors, markers=True, line_shape='linear', labels={'bulan_tahun': 'Periode (Bulan)', 'Jumlah': 'Volume Ulasan', 'pelabuhan': 'Pelabuhan'})
+        fig_trend.update_traces(hovertemplate="<b>%{customdata[0]}</b><br>Bulan: %{x}<br>Jumlah Ulasan: %{y}<extra></extra>", customdata=trend_df[['pelabuhan']])
+        fig_trend.update_layout(height=400, plot_bgcolor='rgba(0,0,0,0)', hovermode="x unified", yaxis=dict(showgrid=True, gridcolor='#EEEEEE'), xaxis=dict(showgrid=False, tickangle=-45), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
         st.plotly_chart(fig_trend, use_container_width=True)
-        if st.button("🔍 Perbesar Tren Volume Ulasan", key="trend_btn"):
-            show_large_plot(fig_trend, "plotly")
+        if st.button("🔍 Perbesar Tren Volume Ulasan", key="trend_btn"): show_large_plot(fig_trend, "plotly")
 
     st.markdown("---")
-
     st.markdown("#### Analisis Aspek Keluhan & Pujian")
     if 'aspects' in df_working.columns and 'sentiment' in df_working.columns:
         summarizer = AspectSummarizer()
-        df_aspect_summary = summarizer.get_aspect_sentiment_summary(
-            df_working, aspect_col='aspects', sentiment_col='sentiment', location_col='pelabuhan'
-        )
-
-        label_mapping = {
-            "LABEL_0": "POSITIF", "LABEL_1": "NETRAL", "LABEL_2": "NEGATIF",
-            "POSITIVE": "POSITIF", "NEUTRAL": "NETRAL", "NEGATIVE": "NEGATIF"
-        }
+        df_aspect_summary = summarizer.get_aspect_sentiment_summary(df_working, aspect_col='aspects', sentiment_col='sentiment', location_col='pelabuhan')
+        label_mapping = {"LABEL_0": "POSITIF", "LABEL_1": "NETRAL", "LABEL_2": "NEGATIF", "POSITIVE": "POSITIF", "NEUTRAL": "NETRAL", "NEGATIVE": "NEGATIF"}
         df_aspect_summary['sentiment'] = df_aspect_summary['sentiment'].replace(label_mapping)
-
         urutan_sentimen = ["NEGATIF", "NETRAL", "POSITIF"]
-
         jml_pelabuhan_unik = df_aspect_summary['pelabuhan'].nunique()
-        baris_dibutuhkan = math.ceil(jml_pelabuhan_unik / 2) 
-        dynamic_height = max(500, baris_dibutuhkan * 400)
-
-        fig_aspect = px.bar(
-            df_aspect_summary, 
-            x='aspects', 
-            y='count', 
-            color='sentiment', 
-            facet_col='pelabuhan', 
-            facet_col_wrap=2,
-            facet_row_spacing=0.15,   
-            facet_col_spacing=0.08, 
-            category_orders={"sentiment": urutan_sentimen}, 
-            color_discrete_map={
-                "POSITIF": "#2E7D32", 
-                "NETRAL": "#B0BEC5",  
-                "NEGATIF": "#E53935"  
-            },
-            labels={'aspects': '', 'count': 'Jumlah Ulasan', 'sentiment': 'Sentimen:'}
-        )
-
-        fig_aspect.update_layout(
-            height=dynamic_height,             
-            plot_bgcolor='rgba(0,0,0,0)', 
-            paper_bgcolor='rgba(0,0,0,0)',
-            font=dict(family="Arial", size=12, color="#424242"),
-            margin=dict(t=80, b=50), 
-            legend=dict(
-                orientation="h", 
-                yanchor="bottom",
-                y=1.02,
-                xanchor="center",
-                x=0.5,
-                title_font=dict(size=1) 
-            )
-        )
-
+        dynamic_height = max(500, math.ceil(jml_pelabuhan_unik / 2) * 400)
+        
+        fig_aspect = px.bar(df_aspect_summary, x='aspects', y='count', color='sentiment', facet_col='pelabuhan', facet_col_wrap=2, facet_row_spacing=0.15, facet_col_spacing=0.08, category_orders={"sentiment": urutan_sentimen}, color_discrete_map={"POSITIF": "#2E7D32", "NETRAL": "#B0BEC5", "NEGATIF": "#E53935"}, labels={'aspects': '', 'count': 'Jumlah Ulasan', 'sentiment': 'Sentimen:'})
+        fig_aspect.update_layout(height=dynamic_height, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font=dict(family="Arial", size=12, color="#424242"), margin=dict(t=80, b=50), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5, title_font=dict(size=1)))
         fig_aspect.update_xaxes(matches=None, showticklabels=True, tickangle=-45, showgrid=False, title_text='')
         fig_aspect.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#EEEEEE', title_text='')
         fig_aspect.for_each_annotation(lambda a: a.update(text=f"<b>{a.text.split('=')[-1]}</b>", font=dict(size=14)))
-
         st.plotly_chart(fig_aspect, use_container_width=True)
-        if st.button("🔍 Perbesar Grafik Aspek Keluhan", key="aspect_btn"):
-            show_large_plot(fig_aspect, "plotly")
+        if st.button("🔍 Perbesar Grafik Aspek Keluhan", key="aspect_btn"): show_large_plot(fig_aspect, "plotly")
 
     st.markdown("---")
     st.markdown("#### 📈 Tren Aspek dari Waktu ke Waktu (Analisis Prediktif)")
@@ -762,83 +381,33 @@ with tab1:
 
     if 'aspects' in df_working.columns and 'bulan_tahun' in df_working.columns:
         df_trend_base = df_working.copy()
-
-        if not df_trend_base.empty:
-            df_trend_base = df_trend_base.explode('aspects')
-
+        if not df_trend_base.empty: df_trend_base = df_trend_base.explode('aspects')
         unique_aspects = [asp for asp in df_trend_base['aspects'].unique() if pd.notna(asp) and str(asp).strip() != ""]
 
         if len(unique_aspects) > 0:
             col_filter1, col_filter2 = st.columns([2, 1])
-
-            with col_filter1:
-                selected_trend_aspects = st.multiselect(
-                    "🔍 Filter Aspek (Bisa pilih lebih dari satu):",
-                    options=unique_aspects,
-                    default=unique_aspects[:3] if len(unique_aspects) >= 3 else unique_aspects
-                )
-
-            with col_filter2:
-                sentimen_fokus = st.radio(
-                    "🎯 Fokus Analisis:",
-                    ["Semua Ulasan", "Khusus Keluhan (Negatif)"],
-                    horizontal=False
-                )
+            with col_filter1: selected_trend_aspects = st.multiselect("🔍 Filter Aspek (Bisa pilih lebih dari satu):", options=unique_aspects, default=unique_aspects[:3] if len(unique_aspects) >= 3 else unique_aspects)
+            with col_filter2: sentimen_fokus = st.radio("🎯 Fokus Analisis:", ["Semua Ulasan", "Khusus Keluhan (Negatif)"], horizontal=False)
 
             if selected_trend_aspects:
                 df_trend_aspect = df_trend_base[df_trend_base['aspects'].isin(selected_trend_aspects)]
-
                 if sentimen_fokus == "Khusus Keluhan (Negatif)" and 'review_rating' in df_trend_aspect.columns:
                     df_trend_aspect = df_trend_aspect[df_trend_aspect['review_rating'] <= 2]
 
                 if not df_trend_aspect.empty:
                     trend_data = df_trend_aspect.groupby(['bulan_tahun', 'pelabuhan', 'aspects']).size().reset_index(name='Frekuensi')
                     trend_data = trend_data.sort_values('bulan_tahun')
-
                     st.markdown(f"<p style='text-align: center; color: gray;'>Data yang ditampilkan: <b>{sentimen_fokus}</b></p>", unsafe_allow_html=True)
-
-                    fig_aspect_trend = px.line(
-                        trend_data,
-                        x='bulan_tahun',
-                        y='Frekuensi',
-                        color='aspects',
-                        facet_col='pelabuhan',
-                        facet_col_wrap=2,
-                        markers=True,
-                        line_shape='spline', 
-                        labels={'bulan_tahun': 'Bulan', 'Frekuensi': 'Jumlah Kemunculan'}
-                    )
-
-                    tinggi_grafik = max(400, math.ceil(df_trend_aspect['pelabuhan'].nunique() / 2) * 350)
-                    fig_aspect_trend.update_layout(
-                        height=tinggi_grafik,
-                        plot_bgcolor='rgba(0,0,0,0)',
-                        paper_bgcolor='rgba(0,0,0,0)',
-                        hovermode="x unified",
-                        margin=dict(t=40, b=100), 
-                        legend=dict(
-                            orientation="h", 
-                            yanchor="top",
-                            y=-0.15,
-                            xanchor="center", 
-                            x=0.5,
-                            title_text=""
-                        )
-                    )
-
+                    fig_aspect_trend = px.line(trend_data, x='bulan_tahun', y='Frekuensi', color='aspects', facet_col='pelabuhan', facet_col_wrap=2, markers=True, line_shape='spline', labels={'bulan_tahun': 'Bulan', 'Frekuensi': 'Jumlah Kemunculan'})
+                    fig_aspect_trend.update_layout(height=max(400, math.ceil(df_trend_aspect['pelabuhan'].nunique() / 2) * 350), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', hovermode="x unified", margin=dict(t=40, b=100), legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5, title_text=""))
                     fig_aspect_trend.update_xaxes(showgrid=False, tickangle=-45, title_text='')
                     fig_aspect_trend.update_yaxes(showgrid=True, gridcolor='#EEEEEE', title_text='Jumlah')
                     fig_aspect_trend.for_each_annotation(lambda a: a.update(text=f"<b>{a.text.split('=')[-1]}</b>"))
-
                     st.plotly_chart(fig_aspect_trend, use_container_width=True)
-                    if st.button("🔍 Perbesar Grafik Tren Prediktif", key="trend_prediksi_btn"):
-                        show_large_plot(fig_aspect_trend, "plotly")
-                else:
-                    st.info(f"Tidak ada data untuk aspek yang dipilih pada filter **{sentimen_fokus}** di rentang waktu ini.")
-            else:
-                st.warning("⚠️ Silakan pilih minimal satu aspek pada filter di atas.")
-        else:
-            st.warning("Data aspek belum diekstraksi. Pastikan model aspect extractor berjalan dengan benar.")
+                    if st.button("🔍 Perbesar Grafik Tren Prediktif", key="trend_prediksi_btn"): show_large_plot(fig_aspect_trend, "plotly")
+                else: st.info(f"Tidak ada data untuk aspek yang dipilih pada filter **{sentimen_fokus}** di rentang waktu ini.")
+            else: st.warning("⚠️ Silakan pilih minimal satu aspek pada filter di atas.")
+        else: st.warning("Data aspek belum diekstraksi. Pastikan model aspect extractor berjalan dengan benar.")
 
 with tab2:
     col_wc, col_hm = st.columns(2)
@@ -846,147 +415,89 @@ with tab2:
     with col_wc:
         st.markdown("#### Visualisasi WordCloud")
         
-        if 'wordcloud_text' in df_working.columns:
-            teks_kolom = 'wordcloud_text'
-        elif 'final_text' in df_working.columns:
-            teks_kolom = 'final_text'
-        elif 'review_text' in df_working.columns:
-            teks_kolom = 'review_text'
-        else:
-            teks_kolom = None
+        teks_kolom = 'wordcloud_text' if 'wordcloud_text' in df_working.columns else 'final_text' if 'final_text' in df_working.columns else 'review_text' if 'review_text' in df_working.columns else None
 
         if teks_kolom:
             semua_teks = " ".join(df_working[teks_kolom].dropna().astype(str))
-
             if semua_teks.strip(): 
-                # --- TAMBAHAN STOPWORD GABUNGAN UNTUK WORDCLOUD ---
-                custom_stopwords = set([
-                    'menjadi', 'kemudian', 'selama', 'untuk', 'utk', 'dari', 'pada', 'di', 'ke', 'dengan', 'dalam', 'yang', 'dan', 'atau', 'tapi',
-                    'saya', 'kami', 'kita', 'mereka', 'orang', 'orang-orang', 'org',
-                    'tiba', 'kedatangan', 'berangkat', 'keberangkatan', 'perjalanan', 'waktu', 'jadwal', 'hari', 'pagi', 'malam',
-                    'lakukan', 'melakukan', 'ambil', 'mengambil', 'beri', 'memberikan', 'minta', 'bertanya', 'tahu', 'lihat', 'melihat', 'pakai', 'pake', 'bilang', 'kata', 'mengatakan', 'miliki', 'punya', 'ada',
-                    'batam', 'nongsa', 'karimun', 'dumai', 'kepri', 'johor', 'singapura',
-                    'pelabuhan', 'terminal', 'dermaga', 'pintu', 'jalur', 'rute',
-                    'kapal', 'fery', 'boat', 'angkutan', 'taksi', 'ojek', 'kendaraan', 'bus',
-                    'hotel', 'toko', 'mall', 'mal', 'restoran', 'warung', 'toilet', 'parkir', 'parkiran',
-                    'terlalu', 'sangat', 'cukup', 'banyak', 'terus', 'pas', 'sendiri',
-                    'imigrasi', 'petugas', 'staf', 'bea cukai', 'porter', 'tiket', 'proses', 'sistem', 'renovasi', 'antrian', 'antrean', 'covid',
-                    'error', 'server', 'please', 'try', 'later', 'that', 'there', 'know', 'nya', 'yg', 'aja', 'udah', 'karena', 'kalau', 'buat',
-                    's', '500', '1500', 'laku', 'tuju', 'antar', 'hubung', 'guna', 'makin',
-                    'dulu', 'bandara', 'changi', 'tanah', 'merah', 'resort', 'front', 'harbourfront', 'mega', 'megamall',
-                    'menyeberang', 'nyebrang', 'lewat', 'langsung',
-                    'pengalaman', 'lainnya', 'biasanya', 'sebelumnya', 'akhirnya', 'memiliki', 'terdapat', 'tersedia', 'pilihan', 'berada', 'macam',
+                # ==========================================
+                # PENDEKATAN WHITELIST (HANYA KATA YANG DIIZINKAN)
+                # ==========================================
+                whitelist_kata = set([
+                    # 1. Kata Sifat (Opini / Sentimen)
+                    'bagus', 'baik', 'nyaman', 'bersih', 'kotor', 'ramah', 'cepat', 'lambat', 'mahal', 'murah', 
+                    'rapi', 'semrawut', 'panas', 'dingin', 'luas', 'sempit', 'aman', 'buruk', 'jelek', 
+                    'mantap', 'keren', 'parah', 'lama', 'mudah', 'susah', 'ribet', 'terbaik', 'memadai', 
+                    'puas', 'kecewa', 'tertib', 'sigap', 'lelet', 'pesing', 'wangi', 'terang', 'gelap', 
+                    'sepi', 'ramai', 'penuh', 'sesak',
                     
-                    # Stopword Indonesia Baru
-                    'dah', 'sdh', 'cuman', 'kayak', 'kalo', 'banget', 'sekali',
-                    'tersebut', 'merupakan', 'terjadi', 'diberikan', 'kembali',
-                    'terasa', 'terlihat', 'termasuk', 'terhadap', 'melalui', 'sehingga', 'menang', 'pekan', 'anak', 'kamu',
-                    'namun', 'maupun', 'malah', 'padahal', 'meski', 'meskipun',
-                    'mulai', 'tetap', 'sama', 'selesai', 'pembangunan', 'perubahan', 'kondisi', 'suasana', 'pemandangan',
-                    'bagian', 'sebuah', 'suatu', 'setiap', 'seluruh',
-                    'disini', 'disana', 'disitu', 'demikian',
-                    'berikut', 'umumnya', 'memang', 'bahkan',
-                    'hampir', 'kadang', 'sering',
-                    'awalnya', 'nantinya', 'sekarang', 'lagi',
-                    'sekedar', 'sekadar', 'tentang', 'antara', 'hingga',
-                    'serta', 'yakni', 'yaitu', 'adapun', 'merasa', 'mohon',
-                    'menggunakan', 'pembelian', 'penjualan', 'berbagai',
+                    # 2. Kata Benda Spesifik (Fasilitas / Aspek)
+                    'fasilitas', 'pelayanan', 'tiket', 'parkir', 'parkiran', 'toilet', 'wc', 'ac', 'kipas', 
+                    'kursi', 'ruang', 'ruangan', 'tunggu', 'imigrasi', 'petugas', 'staf', 'keamanan', 
+                    'akses', 'jalan', 'jembatan', 'tangga', 'lift', 'eskalator', 'taksi', 'ojek', 'mobil', 
+                    'motor', 'transportasi', 'makanan', 'minuman', 'kantin', 'kafe', 'harga', 'bangunan', 
+                    'gedung', 'loket', 'antrian', 'sistem', 'jadwal', 'boarding',
                     
-                    # Stopword English Massal
-                    'one', 'also', 'get', 'take', 'people', 'waiting', 'officer', 'need', 'service', 
-                    'shop', 'airport', 'even', 'want', 'look', 'far', 'still', 'passenger', 'taxis', 'ship', 
-                    'time', 'minute', 'much', 'around', 'near', 'island', 'available',
-                    'crowded', 'very', 'just', 'only', 'really', 'well', 'way', 'make', 'day',
-                    'first', 'back', 'go', 'going', 'come', 'coming', 'like', 'would', 'could', 'should',
-                    'us', 'we', 'they', 'them', 'their', 'our', 'my', 'me', 'he', 'she', 'it', 'is', 'are', 'was', 'were',
-                    'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'doing', 'a', 'an', 'the',
-                    'and', 'but', 'if', 'or', 'because', 'as', 'until', 'while', 'of', 'at', 'by', 'for', 'with',
-                    'about', 'against', 'between', 'into', 'through', 'during', 'before', 'after', 'above', 'below',
-                    'to', 'from', 'up', 'down', 'in', 'out', 'on', 'off', 'over', 'under', 'again', 'further',
-                    'then', 'once', 'here', 'when', 'where', 'why', 'how', 'all', 'any', 'both', 'each',
-                    'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'own', 'same', 'so',
-                    'than', 'too', 'can', 'will', 'don', 'now', 'd', 'll', 'm', 'o', 're', 've', 'y', 'ain', 'aren',
-                    'staff', 'ferry', 'terminal', 'batam', 'singapore', 'bintan', 'port', 'customs', 'custom', 'immigration',
-                    'experience', 'trip', 'journey', 'travel', 'facilities', 'facility', 'ticket', 'tickets', 'price',
-                    'building', 'place', 'location', 'area', 'room', 'toilet', 'car', 'parking', 'food', 'drink', 'water',
-                    
-                    'lumayan', 'sedikit', 'kurang' # Adjectives dimasukkan KHUSUS untuk WordCloud
+                    # 3. Tuntutan Spesifik (Harapan / Perintah)
+                    'perbaiki', 'perbaikan', 'tingkatkan', 'bersihkan', 'tambah', 'ganti', 'renovasi', 
+                    'tertata', 'teratur'
                 ])
 
-                wordcloud = WordCloud(
-                    width=800, 
-                    height=500, 
-                    background_color='white', 
-                    colormap='Blues',
-                    collocations=True, 
-                    min_word_length=3,
-                    stopwords=custom_stopwords 
-                ).generate(semua_teks)
+                # Saring teks: HANYA ambil kata yang ada di dalam whitelist
+                teks_tersaring = " ".join([kata for kata in semua_teks.lower().split() if kata in whitelist_kata])
                 
-                fig_wc, ax_wc = plt.subplots(figsize=(8, 5))
-                ax_wc.imshow(wordcloud, interpolation='bilinear')
-                ax_wc.axis('off')
-                st.pyplot(fig_wc, use_container_width=True)
-                if st.button("🔍 Perbesar WordCloud", key="wc_btn"):
-                    show_large_plot(fig_wc, "pyplot")
-            else:
-                st.info("Tidak ada data teks ulasan yang cukup untuk membuat WordCloud.")
-        else:
-            st.info("Kolom teks tidak ditemukan untuk membuat WordCloud.")
+                if teks_tersaring.strip():
+                    wordcloud = WordCloud(
+                        width=800, 
+                        height=500, 
+                        background_color='white', 
+                        colormap='Blues',
+                        collocations=False, # Dimatikan agar tidak membentuk frasa acak yang tidak nyambung
+                        min_word_length=3
+                    ).generate(teks_tersaring)
+                    
+                    fig_wc, ax_wc = plt.subplots(figsize=(8, 5))
+                    ax_wc.imshow(wordcloud, interpolation='bilinear')
+                    ax_wc.axis('off')
+                    st.pyplot(fig_wc, use_container_width=True)
+                    if st.button("🔍 Perbesar WordCloud", key="wc_btn"): show_large_plot(fig_wc, "pyplot")
+                else: st.info("Tidak ada kata dalam ulasan yang cocok dengan filter Whitelist Anda.")
+            else: st.info("Tidak ada data teks ulasan yang cukup untuk membuat WordCloud.")
+        else: st.info("Kolom teks tidak ditemukan untuk membuat WordCloud.")
 
     with col_hm:
         st.markdown("#### Heatmap Keluhan Konsumen")
         if 'bulan_tahun' in df_working.columns and 'review_rating' in df_working.columns:
             df_negatif = df_working[df_working['review_rating'] <= 2]
-
             if not df_negatif.empty:
-                pivot_keluhan = df_negatif.pivot_table(
-                    index='pelabuhan', 
-                    columns='bulan_tahun', 
-                    values='review_rating', 
-                    aggfunc='count', 
-                    fill_value=0
-                )
-
+                pivot_keluhan = df_negatif.pivot_table(index='pelabuhan', columns='bulan_tahun', values='review_rating', aggfunc='count', fill_value=0)
                 pivot_keluhan = pivot_keluhan.reindex(index=selected_ports, fill_value=0)
                 pivot_keluhan = pivot_keluhan.loc[:, (pivot_keluhan != 0).any(axis=0)]
 
                 fig_hm, ax_hm = plt.subplots(figsize=(14, 6)) 
-                sns.heatmap(pivot_keluhan, cmap='Reds', annot=True, fmt='d', 
-                            linewidths=1.5, linecolor='white', ax=ax_hm, 
-                            annot_kws={"size": 11, "weight": "bold"}, cbar_kws={'label': 'Jumlah Keluhan'})
-                
+                sns.heatmap(pivot_keluhan, cmap='Reds', annot=True, fmt='d', linewidths=1.5, linecolor='white', ax=ax_hm, annot_kws={"size": 11, "weight": "bold"}, cbar_kws={'label': 'Jumlah Keluhan'})
                 ax_hm.set_xlabel("Periode Waktu (Bulan)", fontsize=12, fontweight='bold', labelpad=12)
                 ax_hm.set_ylabel("Terminal Pelabuhan", fontsize=12, fontweight='bold', labelpad=12)
-
                 plt.setp(ax_hm.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor", fontsize=10, fontweight='bold')
                 plt.setp(ax_hm.get_yticklabels(), rotation=0, fontsize=10, fontweight='bold')
-
                 sns.despine(left=True, bottom=True)
                 st.pyplot(fig_hm, use_container_width=True)
-                
-                if st.button("🔍 Perbesar Heatmap", key="hm_btn"):
-                    extra = {'pivot': pivot_keluhan, 'ports': selected_ports}
-                    show_large_plot(fig=None, plot_type="heatmap_khusus", extra_data=extra)
-            else:
-                st.success("Luar biasa! Tidak ada ulasan negatif (Rating 1 & 2) yang ditemukan dalam rentang waktu terfilter.")
+                if st.button("🔍 Perbesar Heatmap", key="hm_btn"): show_large_plot(fig=None, plot_type="heatmap_khusus", extra_data={'pivot': pivot_keluhan, 'ports': selected_ports})
+            else: st.success("Luar biasa! Tidak ada ulasan negatif (Rating 1 & 2) yang ditemukan dalam rentang waktu terfilter.")
 
 with tab3:
     st.header("Sistem Uji Sentimen Real-Time")
     st.markdown("Ketik ulasan di bawah ini untuk melihat bagaimana **Support Vector Machine (SVM) dan TF-IDF** memprediksi sentimen teks secara instan berdasarkan data latih.")
 
     if svm_model is None or tfidf_vectorizer is None:
-        st.error("⚠️ Model SVM (`svm_model.pkl`) atau TF-IDF Vectorizer (`tfidf_vectorizer.pkl`) belum tersedia di folder `data/models/`. Silakan jalankan script pelatihan model terlebih dahulu.")
+        st.error("⚠️ Model SVM (`svm_model.pkl`) atau TF-IDF Vectorizer (`tfidf_vectorizer.pkl`) belum tersedia.")
     else:
         user_input = st.text_area("Ketik ulasan terkait layanan pelabuhan (maks. 500 kata):", height=120)
-
         if st.button("Analisis Ulasan (SVM)", type="primary", use_container_width=True):
             if user_input:
                 with st.spinner('Memproses teks (Preprocessing & TF-IDF)...'):
-                    try:
-                        teks_terjemahan = GoogleTranslator(source='auto', target='id').translate(user_input)
-                    except:
-                        teks_terjemahan = user_input 
+                    try: teks_terjemahan = GoogleTranslator(source='auto', target='id').translate(user_input)
+                    except: teks_terjemahan = user_input 
 
                     teks_bersih = preprocess_text_svm(teks_terjemahan)
                     vektor_teks = tfidf_vectorizer.transform([teks_bersih])
@@ -995,7 +506,6 @@ with tab3:
                     if hasattr(svm_model, "predict_proba"):
                         probabilitas = svm_model.predict_proba(vektor_teks)[0]
                         kelas_model = svm_model.classes_
-
                         prob_pos, prob_neu, prob_neg = 0.0, 0.0, 0.0
                         for i, kls in enumerate(kelas_model):
                             if kls.upper() == "POSITIF" or kls == 1 or kls == 2: prob_pos = probabilitas[i]
@@ -1021,29 +531,20 @@ with tab3:
                         st.progress(float(prob_pos), text=f"Positif: {prob_pos:.1%}")
                         st.progress(float(prob_neu), text=f"Netral: {prob_neu:.1%}") 
                         st.progress(float(prob_neg), text=f"Negatif: {prob_neg:.1%}")
-                        if not hasattr(svm_model, "predict_proba"):
-                            st.warning("Model SVM Anda saat ini tidak dikonfigurasi untuk mengeluarkan probabilitas (probability=False saat training).")
+                        if not hasattr(svm_model, "predict_proba"): st.warning("Model SVM Anda saat ini tidak dikonfigurasi untuk mengeluarkan probabilitas.")
 
 with tab4:
     st.header("Evaluasi Kinerja Model SVM")
     st.markdown("Bagian ini menampilkan metrik performa model Support Vector Machine.")
 
     metrics_path = os.path.join('data', 'models', 'eval_metrics.json')
-    
     if os.path.exists(metrics_path):
-        with open(metrics_path, 'r') as f:
-            metrics_data = json.load(f)
-            
-        akurasi_val = metrics_data.get('accuracy', 0)
-        presisi_val = metrics_data.get('precision', 0)
-        recall_val = metrics_data.get('recall', 0)
-        f1_val = metrics_data.get('f1_score', 0)
-        
+        with open(metrics_path, 'r') as f: metrics_data = json.load(f)
         metrik_col1, metrik_col2, metrik_col3, metrik_col4 = st.columns(4)
-        with metrik_col1: st.metric(label="Accuracy", value=f"{akurasi_val:.1%}")
-        with metrik_col2: st.metric(label="Precision", value=f"{presisi_val:.1%}")
-        with metrik_col3: st.metric(label="Recall", value=f"{recall_val:.1%}")
-        with metrik_col4: st.metric(label="F1-Score", value=f"{f1_val:.1%}")
+        with metrik_col1: st.metric(label="Accuracy", value=f"{metrics_data.get('accuracy', 0):.1%}")
+        with metrik_col2: st.metric(label="Precision", value=f"{metrics_data.get('precision', 0):.1%}")
+        with metrik_col3: st.metric(label="Recall", value=f"{metrics_data.get('recall', 0):.1%}")
+        with metrik_col4: st.metric(label="F1-Score", value=f"{metrics_data.get('f1_score', 0):.1%}")
 
         st.markdown("---")
         st.markdown("#### Confusion Matrix")
@@ -1058,16 +559,12 @@ with tab4:
             ax_cm.set_xlabel('Predicted Label')
             ax_cm.set_ylabel('True Label')
             st.pyplot(fig_cm)
-            if st.button("🔍 Perbesar Confusion Matrix", key="cm_btn"):
-                show_large_plot(fig_cm, "pyplot")
-        else:
-            st.warning("Data Confusion Matrix tidak ditemukan dalam file JSON.")
-
-    else:
-        st.warning("⚠️ File metrik evaluasi (`eval_metrics.json`) belum tersedia. Harap jalankan script pelatihan model (`train_model.py`) terlebih dahulu.")
+            if st.button("🔍 Perbesar Confusion Matrix", key="cm_btn"): show_large_plot(fig_cm, "pyplot")
+        else: st.warning("Data Confusion Matrix tidak ditemukan dalam file JSON.")
+    else: st.warning("⚠️ File metrik evaluasi (`eval_metrics.json`) belum tersedia.")
 
 # ==========================================
-# PEMBARUAN: INSIGHT BERBASIS FAKTA DATA REAL-TIME
+# INSIGHT BERBASIS FAKTA DATA REAL-TIME
 # ==========================================
 st.markdown("---")
 st.subheader("💡 Ringkasan Fakta & Analisis Data Terfilter")
@@ -1078,29 +575,21 @@ if df_working.empty:
     st.info("Pilih pelabuhan dan rentang waktu untuk melihat ringkasan fakta data.")
 else:
     col_ins1, col_ins2 = st.columns([3, 2])
-
     with col_ins1:
         st.markdown("##### 📌 Temuan Aspek & Distribusi Keluhan")
-        
         if not df_negatif_insight.empty:
             keluhan_per_port = df_negatif_insight['pelabuhan'].value_counts()
             total_per_port = df_working['pelabuhan'].value_counts()
             rasio_keluhan = (keluhan_per_port / total_per_port * 100).dropna().sort_values(ascending=False)
             port_terbanyak_komplain = keluhan_per_port.index[0]
             jml_komplain_max = keluhan_per_port.iloc[0]
-            
-            st.write(
-                f"- **Volume Keluhan Tertinggi:** Pelabuhan **{port_terbanyak_komplain}** mencatatkan keluhan terbanyak yaitu **{jml_komplain_max} ulasan negatif** "
-                f"(sekitar {rasio_keluhan.get(port_terbanyak_komplain, 0):.1f}% dari total ulasan di pelabuhan tersebut pada periode yang dipilih)."
-            )
+            st.write(f"- **Volume Keluhan Tertinggi:** Pelabuhan **{port_terbanyak_komplain}** mencatatkan keluhan terbanyak yaitu **{jml_komplain_max} ulasan negatif** (sekitar {rasio_keluhan.get(port_terbanyak_komplain, 0):.1f}% dari total ulasan di pelabuhan tersebut pada periode yang dipilih).")
         else:
             st.write("- **Status Layanan:** Tidak ditemukan keluhan signifikan (Rating ≤ 2) pada filter data yang dipilih saat ini.")
 
         if 'aspects' in df_working.columns and not df_negatif_insight.empty:
             df_aspek_neg = df_negatif_insight.copy()
-            if isinstance(df_aspek_neg['aspects'].iloc[0], list):
-                df_aspek_neg = df_aspek_neg.explode('aspects')
-            
+            if isinstance(df_aspek_neg['aspects'].iloc[0], list): df_aspek_neg = df_aspek_neg.explode('aspects')
             df_aspek_neg = df_aspek_neg[df_aspek_neg['aspects'].notna() & (df_aspek_neg['aspects'] != "")]
             
             if not df_aspek_neg.empty:
@@ -1108,16 +597,9 @@ else:
                 top_aspect_count = df_aspek_neg['aspects'].value_counts().iloc[0]
                 port_top_aspect = df_aspek_neg[df_aspek_neg['aspects'] == top_aspect]['pelabuhan'].value_counts().index[0]
                 port_top_aspect_count = df_aspek_neg[df_aspek_neg['aspects'] == top_aspect]['pelabuhan'].value_counts().iloc[0]
-                
-                st.write(
-                    f"- **Aspek Masalah Utama:** Aspek **'{top_aspect}'** adalah isu yang paling sering dikeluhkan oleh konsumen "
-                    f"(muncul sebanyak **{top_aspect_count} kali**), dengan konsentrasi keluhan tertinggi berada di **{port_top_aspect}** ({port_top_aspect_count} ulasan)."
-                )
+                st.write(f"- **Aspek Masalah Utama:** Aspek **'{top_aspect}'** adalah isu yang paling sering dikeluhkan oleh konsumen (muncul sebanyak **{top_aspect_count} kali**), dengan konsentrasi keluhan tertinggi berada di **{port_top_aspect}** ({port_top_aspect_count} ulasan).")
 
-        st.write(
-            f"- **Statistik Keseluruhan:** Dari total **{len(df_working):,}** ulasan terfilter, terdapat **{len(df_negatif_insight):,} keluhan (Rating 1-2)**, "
-            f"dengan rata-rata rating kepuasan konsumen berada di angka **{avg_rating:.2f} ⭐**."
-        )
+        st.write(f"- **Statistik Keseluruhan:** Dari total **{len(df_working):,}** ulasan terfilter, terdapat **{len(df_negatif_insight):,} keluhan (Rating 1-2)**, dengan rata-rata rating kepuasan konsumen berada di angka **{avg_rating:.2f} ⭐**.")
 
     with col_ins2:
         st.markdown("##### 💬 Contoh Ulasan Negatif Terbaru")
@@ -1126,30 +608,16 @@ else:
             for _, row in df_sample_neg.iterrows():
                 tgl_str = row['tanggal'].strftime('%b %Y') if pd.notna(row['tanggal']) else "-"
                 rating_val = int(row['review_rating']) if pd.notna(row['review_rating']) else 1
-                
-                st.markdown(
-                    f"""
-                    <div style="background-color: rgba(255, 75, 75, 0.08); border-left: 4px solid #E53935; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
-                        <small style="color: #666;"><b>{row['pelabuhan']}</b> • {tgl_str} • {'⭐'*rating_val}</small><br>
-                        <span style="font-size: 13px; font-style: italic;">"{row['review_text']}"</span>
-                    </div>
-                    """, 
-                    unsafe_allow_html=True
-                )
-        else:
-            st.info("Tidak ada sampel keluhan terbaru pada filter yang aktif.")
+                st.markdown(f"""<div style="background-color: rgba(255, 75, 75, 0.08); border-left: 4px solid #E53935; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
+                                <small style="color: #666;"><b>{row['pelabuhan']}</b> • {tgl_str} • {'⭐'*rating_val}</small><br>
+                                <span style="font-size: 13px; font-style: italic;">"{row['review_text']}"</span></div>""", unsafe_allow_html=True)
+        else: st.info("Tidak ada sampel keluhan terbaru pada filter yang aktif.")
 
 st.markdown("---")
-
 with st.expander("Lihat Data Ulasan Mentah (Tabel)"):
     cols_to_show = ['pelabuhan', 'tanggal', 'review_text', 'review_rating']
     available_cols = [c for c in cols_to_show if c in df_working.columns]
-
-    if 'aspects' in df_working.columns:
-        available_cols.append('aspects')
-
+    if 'aspects' in df_working.columns: available_cols.append('aspects')
     df_tabel = df_working[available_cols].copy()
-    if 'tanggal' in df_tabel.columns:
-        df_tabel['tanggal'] = df_tabel['tanggal'].dt.strftime('%Y-%m-%d')
-
+    if 'tanggal' in df_tabel.columns: df_tabel['tanggal'] = df_tabel['tanggal'].dt.strftime('%Y-%m-%d')
     st.dataframe(df_tabel, use_container_width=True)
