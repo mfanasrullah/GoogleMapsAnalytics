@@ -3,7 +3,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from wordcloud import WordCloud
-from stopwords_wordcloud import WORDCLOUD_STOPWORDS
 import re
 import os
 import PIL.Image as PILImage
@@ -829,21 +828,24 @@ with tab2:
             semua_teks = " ".join(df_working[teks_kolom].dropna().astype(str))
 
             if semua_teks.strip(): 
-                # Stopword WordCloud diambil dari stopwords_wordcloud.py, satu-satunya
-                # sumber yang juga dipakai preprocessing.py, supaya hasil dataset dan
-                # hasil render Streamlit selalu konsisten. Daftar ini sudah dioptimalkan
-                # khusus untuk riset "Analisis Sentimen Pelabuhan" (lihat docstring di
-                # file tersebut untuk filosofi penyusunannya).
-                custom_stopwords = set(WORDCLOUD_STOPWORDS)
-
-                # Filter token super-pendek (mis. sisa 'a', 'i', 's', 't' dari translasi
-                # yang tidak sempurna) sebelum masuk WordCloud, sebagai lapisan
-                # keamanan tambahan di luar filter min_word_length milik WordCloud.
-                token_bersih = [
-                    w for w in semua_teks.split()
-                    if w not in custom_stopwords and len(w) >= 3
-                ]
-                semua_teks_bersih = " ".join(token_bersih)
+                custom_stopwords = set([
+                    'menjadi', 'kemudian', 'selama', 'untuk', 'utk', 'dari', 'pada', 'di', 'ke', 'dengan', 'dalam', 'yang', 'dan', 'atau', 'tapi',
+                    'saya', 'kami', 'kita', 'mereka', 'orang', 'orang-orang',
+                    'tiba', 'kedatangan', 'berangkat', 'keberangkatan', 'perjalanan', 'waktu', 'jadwal', 'hari', 'pagi', 'malam',
+                    'lakukan', 'melakukan', 'ambil', 'mengambil', 'beri', 'memberikan', 'minta', 'bertanya', 'tahu', 'lihat', 'melihat', 'pakai', 'pake', 'bilang', 'kata', 'mengatakan', 'miliki', 'punya', 'ada',
+                    'batam', 'nongsa', 'karimun', 'dumai', 'kepri', 'johor', 'singapura',
+                    'pelabuhan', 'terminal', 'dermaga', 'pintu', 'jalur', 'rute',
+                    'kapal', 'fery', 'boat', 'angkutan', 'taksi', 'ojek', 'kendaraan', 'bus',
+                    'hotel', 'toko', 'mall', 'mal', 'restoran', 'warung', 'toilet', 'parkir', 'parkiran',
+                    'terlalu', 'sangat', 'cukup', 'banyak', 'terus', 'pas', 'sendiri',
+                    'imigrasi', 'petugas', 'staf', 'bea cukai', 'porter', 'tiket', 'proses', 'sistem', 'renovasi', 'antrian', 'antrean', 'covid',
+                    'error', 'server', 'please', 'try', 'later', 'that', 'there', 'know', 'nya', 'yg', 'aja', 'udah', 'karena', 'kalau', 'buat',
+                    's', '500', '1500', 'laku', 'tuju', 'antar', 'hubung', 'guna', 'makin',
+                    'dulu', 'bandara', 'changi', 'tanah', 'merah', 'resort', 'front', 'harbourfront', 'mega', 'megamall',
+                    'menyeberang', 'nyebrang', 'lewat', 'langsung',
+                    'pengalaman', 'lainnya', 'biasanya', 'sebelumnya', 'akhirnya', 'memiliki', 'terdapat', 'tersedia', 'pilihan', 'berada', 'macam',
+                    'lumayan', 'sedikit', 'kurang'
+                ])
 
                 wordcloud = WordCloud(
                     width=800, 
@@ -853,7 +855,7 @@ with tab2:
                     collocations=True, 
                     min_word_length=3,
                     stopwords=custom_stopwords 
-                ).generate(semua_teks_bersih)
+                ).generate(semua_teks)
                 
                 fig_wc, ax_wc = plt.subplots(figsize=(8, 5))
                 ax_wc.imshow(wordcloud, interpolation='bilinear')
