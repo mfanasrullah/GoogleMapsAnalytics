@@ -137,7 +137,6 @@ def init_preprocessing_tools():
     stopword_factory = StopWordRemoverFactory()
     default_stopwords = stopword_factory.get_stop_words()
     
-    # Custom stopwords hanya digunakan untuk pemrosesan teks uji SVM real-time
     custom_stopwords = [
         'menjadi', 'kemudian', 'selama', 'untuk', 'utk', 'dari', 'pada', 'di', 'ke', 'dengan', 'dalam', 'yang', 'dan', 'atau', 'tapi',
         'saya', 'kami', 'kita', 'mereka', 'orang', 'orang-orang', 'org', 'tiba', 'kedatangan', 'berangkat', 'keberangkatan', 'perjalanan', 'waktu', 'jadwal', 'hari', 'pagi', 'malam',
@@ -178,24 +177,34 @@ def load_logo():
 logo_polibatam = load_logo()
 
 def parse_gmaps_time(time_str):
-    now = datetime(2026, 8, 24)
+    # ==========================================
+    # ANCHOR DATE: 20 September 2024
+    # Sesuai dengan tanggal terakhir scraping Google Maps
+    # ==========================================
+    now = datetime(2024, 9, 20)
+    
     if pd.isna(time_str) or str(time_str).strip() == "": return now
     time_str = str(time_str).lower()
+    
+    # Terjemahan string spesifik ("sebulan", "seminggu", "setahun", dsb.)
     if any(x in time_str for x in ['sebulan', 'a month', '1 month']): return now - timedelta(days=30)
     if any(x in time_str for x in ['setahun', 'a year', '1 year']): return now - timedelta(days=365)
     if any(x in time_str for x in ['seminggu', 'a week', '1 week']): return now - timedelta(days=7)
     if any(x in time_str for x in ['sehari', 'a day', '1 day']): return now - timedelta(days=1)
     if any(x in time_str for x in ['sejam', 'an hour', '1 hour', 'baru saja', 'just now', 'minutes']): return now 
     
+    # Menangkap angka pada string (misal: "2 tahun lalu", "7 bulan lalu")
     num_match = re.findall(r'\d+', time_str)
     if not num_match: return now
     num = int(num_match[0])
     
+    # Perhitungan mundur dinamis
     if 'tahun' in time_str or 'year' in time_str: return now - timedelta(days=num*365)
     if 'bulan' in time_str or 'month' in time_str: return now - timedelta(days=num*30)
     if 'minggu' in time_str or 'week' in time_str: return now - timedelta(days=num*7)
     if 'hari' in time_str or 'day' in time_str: return now - timedelta(days=num)
     if 'jam' in time_str or 'hour' in time_str: return now 
+    
     return now
 
 @st.cache_data(ttl="1d") 
@@ -420,40 +429,27 @@ with tab2:
         if teks_kolom:
             semua_teks = " ".join(df_working[teks_kolom].dropna().astype(str))
             if semua_teks.strip(): 
-                # ==========================================
-                # PENDEKATAN WHITELIST (HANYA KATA YANG DIIZINKAN)
-                # ==========================================
                 whitelist_kata = set([
-                    # 1. Kata Sifat (Opini / Sentimen)
                     'bagus', 'baik', 'nyaman', 'bersih', 'kotor', 'ramah', 'cepat', 'lambat', 'mahal', 'murah', 
                     'rapi', 'semrawut', 'panas', 'dingin', 'luas', 'sempit', 'aman', 'buruk', 'jelek', 
                     'mantap', 'keren', 'parah', 'lama', 'mudah', 'susah', 'ribet', 'terbaik', 'memadai', 
                     'puas', 'kecewa', 'tertib', 'sigap', 'lelet', 'pesing', 'wangi', 'terang', 'gelap', 
                     'sepi', 'ramai', 'penuh', 'sesak',
-                    
-                    # 2. Kata Benda Spesifik (Fasilitas / Aspek)
                     'fasilitas', 'pelayanan', 'tiket', 'parkir', 'parkiran', 'toilet', 'wc', 'ac', 'kipas', 
                     'kursi', 'ruang', 'ruangan', 'tunggu', 'imigrasi', 'petugas', 'staf', 'keamanan', 
                     'akses', 'jalan', 'jembatan', 'tangga', 'lift', 'eskalator', 'taksi', 'ojek', 'mobil', 
                     'motor', 'transportasi', 'makanan', 'minuman', 'kantin', 'kafe', 'harga', 'bangunan', 
                     'gedung', 'loket', 'antrian', 'sistem', 'jadwal', 'boarding',
-                    
-                    # 3. Tuntutan Spesifik (Harapan / Perintah)
                     'perbaiki', 'perbaikan', 'tingkatkan', 'bersihkan', 'tambah', 'ganti', 'renovasi', 
                     'tertata', 'teratur'
                 ])
 
-                # Saring teks: HANYA ambil kata yang ada di dalam whitelist
                 teks_tersaring = " ".join([kata for kata in semua_teks.lower().split() if kata in whitelist_kata])
                 
                 if teks_tersaring.strip():
                     wordcloud = WordCloud(
-                        width=800, 
-                        height=500, 
-                        background_color='white', 
-                        colormap='Blues',
-                        collocations=False, # Dimatikan agar tidak membentuk frasa acak yang tidak nyambung
-                        min_word_length=3
+                        width=800, height=500, background_color='white', colormap='Blues',
+                        collocations=False, min_word_length=3
                     ).generate(teks_tersaring)
                     
                     fig_wc, ax_wc = plt.subplots(figsize=(8, 5))
