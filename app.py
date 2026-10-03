@@ -119,7 +119,7 @@ def show_large_plot(fig=None, plot_type="pyplot", extra_data=None):
         fig_large, ax_large = plt.subplots(figsize=(20, 8)) 
         sns.heatmap(pivot_data, cmap='Reds', annot=True, fmt='d', 
                     linewidths=1.5, linecolor='white', ax=ax_large, annot_kws={"size": 12, "weight": "bold"})
-        ax_large.set_xlabel("Periode Waktu (Bulan)", fontsize=14, fontweight='bold', labelpad=15)
+        ax_large.set_xlabel("Periode Ulasan (Google Maps)", fontsize=14, fontweight='bold', labelpad=15)
         ax_large.set_ylabel("Terminal Pelabuhan", fontsize=14, fontweight='bold', labelpad=15)
         plt.setp(ax_large.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor", fontsize=12, fontweight='bold')
         plt.setp(ax_large.get_yticklabels(), rotation=0, fontsize=12, fontweight='bold')
@@ -177,35 +177,60 @@ def load_logo():
 logo_polibatam = load_logo()
 
 def parse_gmaps_time(time_str):
-    # ==========================================
-    # ANCHOR DATE: 20 September 2024
-    # Sesuai dengan tanggal terakhir scraping Google Maps
-    # ==========================================
+    # Anchor date untuk pembatasan filter tanggal di sidebar
     now = datetime(2024, 9, 20)
-    
     if pd.isna(time_str) or str(time_str).strip() == "": return now
     time_str = str(time_str).lower()
     
-    # Terjemahan string spesifik ("sebulan", "seminggu", "setahun", dsb.)
     if any(x in time_str for x in ['sebulan', 'a month', '1 month']): return now - timedelta(days=30)
     if any(x in time_str for x in ['setahun', 'a year', '1 year']): return now - timedelta(days=365)
     if any(x in time_str for x in ['seminggu', 'a week', '1 week']): return now - timedelta(days=7)
     if any(x in time_str for x in ['sehari', 'a day', '1 day']): return now - timedelta(days=1)
     if any(x in time_str for x in ['sejam', 'an hour', '1 hour', 'baru saja', 'just now', 'minutes']): return now 
     
-    # Menangkap angka pada string (misal: "2 tahun lalu", "7 bulan lalu")
     num_match = re.findall(r'\d+', time_str)
     if not num_match: return now
     num = int(num_match[0])
     
-    # Perhitungan mundur dinamis
     if 'tahun' in time_str or 'year' in time_str: return now - timedelta(days=num*365)
     if 'bulan' in time_str or 'month' in time_str: return now - timedelta(days=num*30)
     if 'minggu' in time_str or 'week' in time_str: return now - timedelta(days=num*7)
     if 'hari' in time_str or 'day' in time_str: return now - timedelta(days=num)
     if 'jam' in time_str or 'hour' in time_str: return now 
-    
     return now
+
+def parse_gmaps_time_relative(time_str):
+    """
+    Fungsi BARU: Merubah teks gmaps acak menjadi teks yang rapi dan seragam (contoh: '2 Tahun lalu').
+    Mengembalikan format Tuple: (Int Days Ago, String Periode) untuk keperluan pengurutan (Sorting) grafis.
+    """
+    if pd.isna(time_str) or str(time_str).strip() == "": return (0, "Baru saja")
+    t_str = str(time_str).lower().replace('diedit', '').replace('edited', '').strip()
+    
+    if any(x in t_str for x in ['jam', 'hour', 'menit', 'minute', 'baru', 'just']):
+        return (0, "Baru saja")
+    
+    if 'hari' in t_str or 'day' in t_str:
+        if 'sehari' in t_str or 'a day' in t_str or '1 day' in t_str: return (1, "1 Hari lalu")
+        nums = re.findall(r'\d+', t_str)
+        return (int(nums[0]), f"{nums[0]} Hari lalu") if nums else (1, "1 Hari lalu")
+        
+    if 'minggu' in t_str or 'week' in t_str:
+        if 'seminggu' in t_str or 'a week' in t_str or '1 week' in t_str: return (7, "1 Minggu lalu")
+        nums = re.findall(r'\d+', t_str)
+        return (int(nums[0]) * 7, f"{nums[0]} Minggu lalu") if nums else (7, "1 Minggu lalu")
+        
+    if 'bulan' in t_str or 'month' in t_str:
+        if 'sebulan' in t_str or 'a month' in t_str or '1 month' in t_str: return (30, "1 Bulan lalu")
+        nums = re.findall(r'\d+', t_str)
+        return (int(nums[0]) * 30, f"{nums[0]} Bulan lalu") if nums else (30, "1 Bulan lalu")
+        
+    if 'tahun' in t_str or 'year' in t_str:
+        if 'setahun' in t_str or 'a year' in t_str or '1 year' in t_str: return (365, "1 Tahun lalu")
+        nums = re.findall(r'\d+', t_str)
+        return (int(nums[0]) * 365, f"{nums[0]} Tahun lalu") if nums else (365, "1 Tahun lalu")
+        
+    return (0, "Baru saja")
 
 @st.cache_data(ttl="1d") 
 def load_data():
@@ -217,9 +242,15 @@ def load_data():
     
     if 'rating' in df.columns:
         df['review_rating'] = df['rating'].astype(str).str.extract(r'(\d+)').astype(float)
+    
     if 'time' in df.columns:
+        # [TETAP] Dipertahankan untuk fitur kalender Filter Sidebar saja
         df['tanggal'] = df['time'].apply(parse_gmaps_time)
-        df['bulan_tahun'] = df['tanggal'].dt.to_period('M').astype(str)
+        
+        # [BARU] Mengekstrak teks relatif "1 Tahun lalu" untuk Grafik dan Tabel
+        parsed_rel = df['time'].apply(parse_gmaps_time_relative)
+        df['days_ago'] = parsed_rel.apply(lambda x: x[0])
+        df['bulan_tahun'] = parsed_rel.apply(lambda x: x[1]) # Gantikan variabel bulan_tahun agar langsung dibaca chart
         
     if 'aspects' in df.columns:
         def convert_to_list(val):
@@ -355,13 +386,16 @@ with tab1:
             if st.button("🔍 Perbesar Diagram Kualitas", key="scat_btn"): show_large_plot(fig_scat, "plotly")
 
     st.markdown("---")
-    st.markdown("#### Tren Volume Ulasan per Bulan")
+    st.markdown("#### Tren Volume Ulasan")
     if 'bulan_tahun' in df_working.columns:
-        trend_df = df_working.groupby(['bulan_tahun', 'pelabuhan']).size().reset_index(name='Jumlah')
-        trend_df = trend_df.sort_values('bulan_tahun')
-        fig_trend = px.line(trend_df, x='bulan_tahun', y='Jumlah', color='pelabuhan', color_discrete_map=port_colors, markers=True, line_shape='linear', labels={'bulan_tahun': 'Periode (Bulan)', 'Jumlah': 'Volume Ulasan', 'pelabuhan': 'Pelabuhan'})
-        fig_trend.update_traces(hovertemplate="<b>%{customdata[0]}</b><br>Bulan: %{x}<br>Jumlah Ulasan: %{y}<extra></extra>", customdata=trend_df[['pelabuhan']])
+        trend_df = df_working.groupby(['bulan_tahun', 'pelabuhan', 'days_ago']).size().reset_index(name='Jumlah')
+        trend_df = trend_df.sort_values('days_ago', ascending=False) # Mengurutkan secara logis dari waktu terlama ke terbaru
+        urutan_waktu = trend_df['bulan_tahun'].unique().tolist()
+        
+        fig_trend = px.line(trend_df, x='bulan_tahun', y='Jumlah', color='pelabuhan', color_discrete_map=port_colors, markers=True, line_shape='linear', labels={'bulan_tahun': 'Periode Ulasan', 'Jumlah': 'Volume Ulasan', 'pelabuhan': 'Pelabuhan'})
+        fig_trend.update_traces(hovertemplate="<b>%{customdata[0]}</b><br>Waktu: %{x}<br>Jumlah Ulasan: %{y}<extra></extra>", customdata=trend_df[['pelabuhan']])
         fig_trend.update_layout(height=400, plot_bgcolor='rgba(0,0,0,0)', hovermode="x unified", yaxis=dict(showgrid=True, gridcolor='#EEEEEE'), xaxis=dict(showgrid=False, tickangle=-45), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
+        fig_trend.update_xaxes(categoryorder='array', categoryarray=urutan_waktu) # Memaksa sumbu X mengikuti urutan days_ago
         st.plotly_chart(fig_trend, use_container_width=True)
         if st.button("🔍 Perbesar Tren Volume Ulasan", key="trend_btn"): show_large_plot(fig_trend, "plotly")
 
@@ -386,7 +420,7 @@ with tab1:
 
     st.markdown("---")
     st.markdown("#### 📈 Tren Aspek dari Waktu ke Waktu (Analisis Prediktif)")
-    st.write("Pantau kapan suatu aspek sering dibicarakan untuk memprediksi potensi masalah di masa depan berdasarkan tren bulan-bulan sebelumnya.")
+    st.write("Pantau kapan suatu aspek sering dibicarakan untuk memprediksi potensi masalah di masa depan berdasarkan histori.")
 
     if 'aspects' in df_working.columns and 'bulan_tahun' in df_working.columns:
         df_trend_base = df_working.copy()
@@ -404,12 +438,14 @@ with tab1:
                     df_trend_aspect = df_trend_aspect[df_trend_aspect['review_rating'] <= 2]
 
                 if not df_trend_aspect.empty:
-                    trend_data = df_trend_aspect.groupby(['bulan_tahun', 'pelabuhan', 'aspects']).size().reset_index(name='Frekuensi')
-                    trend_data = trend_data.sort_values('bulan_tahun')
+                    trend_data = df_trend_aspect.groupby(['bulan_tahun', 'pelabuhan', 'aspects', 'days_ago']).size().reset_index(name='Frekuensi')
+                    trend_data = trend_data.sort_values('days_ago', ascending=False)
+                    urutan_waktu_aspek = trend_data['bulan_tahun'].unique().tolist()
+                    
                     st.markdown(f"<p style='text-align: center; color: gray;'>Data yang ditampilkan: <b>{sentimen_fokus}</b></p>", unsafe_allow_html=True)
-                    fig_aspect_trend = px.line(trend_data, x='bulan_tahun', y='Frekuensi', color='aspects', facet_col='pelabuhan', facet_col_wrap=2, markers=True, line_shape='spline', labels={'bulan_tahun': 'Bulan', 'Frekuensi': 'Jumlah Kemunculan'})
+                    fig_aspect_trend = px.line(trend_data, x='bulan_tahun', y='Frekuensi', color='aspects', facet_col='pelabuhan', facet_col_wrap=2, markers=True, line_shape='spline', labels={'bulan_tahun': 'Periode', 'Frekuensi': 'Jumlah Kemunculan'})
                     fig_aspect_trend.update_layout(height=max(400, math.ceil(df_trend_aspect['pelabuhan'].nunique() / 2) * 350), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', hovermode="x unified", margin=dict(t=40, b=100), legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5, title_text=""))
-                    fig_aspect_trend.update_xaxes(showgrid=False, tickangle=-45, title_text='')
+                    fig_aspect_trend.update_xaxes(categoryorder='array', categoryarray=urutan_waktu_aspek, showgrid=False, tickangle=-45, title_text='')
                     fig_aspect_trend.update_yaxes(showgrid=True, gridcolor='#EEEEEE', title_text='Jumlah')
                     fig_aspect_trend.for_each_annotation(lambda a: a.update(text=f"<b>{a.text.split('=')[-1]}</b>"))
                     st.plotly_chart(fig_aspect_trend, use_container_width=True)
@@ -467,12 +503,18 @@ with tab2:
             df_negatif = df_working[df_working['review_rating'] <= 2]
             if not df_negatif.empty:
                 pivot_keluhan = df_negatif.pivot_table(index='pelabuhan', columns='bulan_tahun', values='review_rating', aggfunc='count', fill_value=0)
+                
+                # URUTKAN KOLOM KRONOLOGIS (Dari yang terlama hingga Baru saja)
+                order_df = df_working[['bulan_tahun', 'days_ago']].drop_duplicates().sort_values('days_ago', ascending=False)
+                sorted_periods_hm = order_df['bulan_tahun'].tolist()
+                
                 pivot_keluhan = pivot_keluhan.reindex(index=selected_ports, fill_value=0)
-                pivot_keluhan = pivot_keluhan.loc[:, (pivot_keluhan != 0).any(axis=0)]
+                pivot_keluhan = pivot_keluhan.reindex(columns=[p for p in sorted_periods_hm if p in pivot_keluhan.columns], fill_value=0)
+                pivot_keluhan = pivot_keluhan.loc[:, (pivot_keluhan != 0).any(axis=0)] # Bersihkan kolom kosong
 
                 fig_hm, ax_hm = plt.subplots(figsize=(14, 6)) 
                 sns.heatmap(pivot_keluhan, cmap='Reds', annot=True, fmt='d', linewidths=1.5, linecolor='white', ax=ax_hm, annot_kws={"size": 11, "weight": "bold"}, cbar_kws={'label': 'Jumlah Keluhan'})
-                ax_hm.set_xlabel("Periode Waktu (Bulan)", fontsize=12, fontweight='bold', labelpad=12)
+                ax_hm.set_xlabel("Periode Ulasan (Google Maps)", fontsize=12, fontweight='bold', labelpad=12)
                 ax_hm.set_ylabel("Terminal Pelabuhan", fontsize=12, fontweight='bold', labelpad=12)
                 plt.setp(ax_hm.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor", fontsize=10, fontweight='bold')
                 plt.setp(ax_hm.get_yticklabels(), rotation=0, fontsize=10, fontweight='bold')
@@ -600,20 +642,20 @@ else:
     with col_ins2:
         st.markdown("##### 💬 Contoh Ulasan Negatif Terbaru")
         if not df_negatif_insight.empty and 'review_text' in df_negatif_insight.columns:
-            df_sample_neg = df_negatif_insight.sort_values('tanggal', ascending=False).head(2)
+            df_sample_neg = df_negatif_insight.sort_values('days_ago', ascending=True).head(2) # Dirubah menggunakan patokan waktu terbaru
             for _, row in df_sample_neg.iterrows():
-                tgl_str = row['tanggal'].strftime('%b %Y') if pd.notna(row['tanggal']) else "-"
+                waktu_str = row['bulan_tahun'] if pd.notna(row['bulan_tahun']) else "-"
                 rating_val = int(row['review_rating']) if pd.notna(row['review_rating']) else 1
                 st.markdown(f"""<div style="background-color: rgba(255, 75, 75, 0.08); border-left: 4px solid #E53935; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
-                                <small style="color: #666;"><b>{row['pelabuhan']}</b> • {tgl_str} • {'⭐'*rating_val}</small><br>
+                                <small style="color: #666;"><b>{row['pelabuhan']}</b> • {waktu_str} • {'⭐'*rating_val}</small><br>
                                 <span style="font-size: 13px; font-style: italic;">"{row['review_text']}"</span></div>""", unsafe_allow_html=True)
         else: st.info("Tidak ada sampel keluhan terbaru pada filter yang aktif.")
 
 st.markdown("---")
 with st.expander("Lihat Data Ulasan Mentah (Tabel)"):
-    cols_to_show = ['pelabuhan', 'tanggal', 'review_text', 'review_rating']
+    cols_to_show = ['pelabuhan', 'bulan_tahun', 'review_text', 'review_rating'] # Menggunakan string asli
     available_cols = [c for c in cols_to_show if c in df_working.columns]
     if 'aspects' in df_working.columns: available_cols.append('aspects')
     df_tabel = df_working[available_cols].copy()
-    if 'tanggal' in df_tabel.columns: df_tabel['tanggal'] = df_tabel['tanggal'].dt.strftime('%Y-%m-%d')
+    df_tabel = df_tabel.rename(columns={'bulan_tahun': 'Periode Ulasan'}) # Rename khusus di tabel
     st.dataframe(df_tabel, use_container_width=True)
