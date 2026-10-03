@@ -137,6 +137,7 @@ def init_preprocessing_tools():
     stopword_factory = StopWordRemoverFactory()
     default_stopwords = stopword_factory.get_stop_words()
     
+    # Custom stopwords hanya digunakan untuk pemrosesan teks uji SVM real-time
     custom_stopwords = [
         'menjadi', 'kemudian', 'selama', 'untuk', 'utk', 'dari', 'pada', 'di', 'ke', 'dengan', 'dalam', 'yang', 'dan', 'atau', 'tapi',
         'saya', 'kami', 'kita', 'mereka', 'orang', 'orang-orang', 'org', 'tiba', 'kedatangan', 'berangkat', 'keberangkatan', 'perjalanan', 'waktu', 'jadwal', 'hari', 'pagi', 'malam',
@@ -178,7 +179,7 @@ logo_polibatam = load_logo()
 
 def parse_gmaps_time(time_str):
     # Anchor date untuk pembatasan filter tanggal di sidebar
-    now = datetime(2024, 9, 20)
+    now = datetime(2026, 9, 20)
     if pd.isna(time_str) or str(time_str).strip() == "": return now
     time_str = str(time_str).lower()
     
@@ -642,7 +643,7 @@ else:
     with col_ins2:
         st.markdown("##### 💬 Contoh Ulasan Negatif Terbaru")
         if not df_negatif_insight.empty and 'review_text' in df_negatif_insight.columns:
-            df_sample_neg = df_negatif_insight.sort_values('days_ago', ascending=True).head(2) # Dirubah menggunakan patokan waktu terbaru
+            df_sample_neg = df_negatif_insight.sort_values('days_ago', ascending=True).head(2) 
             for _, row in df_sample_neg.iterrows():
                 waktu_str = row['bulan_tahun'] if pd.notna(row['bulan_tahun']) else "-"
                 rating_val = int(row['review_rating']) if pd.notna(row['review_rating']) else 1
@@ -653,9 +654,9 @@ else:
 
 st.markdown("---")
 with st.expander("Lihat Data Ulasan Mentah (Tabel)"):
-    cols_to_show = ['pelabuhan', 'bulan_tahun', 'review_text', 'review_rating'] # Menggunakan string asli
+    cols_to_show = ['pelabuhan', 'bulan_tahun', 'review_text', 'review_rating'] 
     available_cols = [c for c in cols_to_show if c in df_working.columns]
     if 'aspects' in df_working.columns: available_cols.append('aspects')
     df_tabel = df_working[available_cols].copy()
-    df_tabel = df_tabel.rename(columns={'bulan_tahun': 'Periode Ulasan'}) # Rename khusus di tabel
+    df_tabel = df_tabel.rename(columns={'bulan_tahun': 'Periode Ulasan'}) 
     st.dataframe(df_tabel, use_container_width=True)
